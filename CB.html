@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FetanDrive — Premium Managed Car Rentals</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { DEFAULT: '#F25C05', hover: '#D94D04', light: '#FEF0E6' },
+                        telegram: '#229ED9',
+                        surface: '#FFFFFF',
+                        background: '#F8F4F0',
+                        content: '#1A1C1E',
+                        muted: '#8A8D93',
+                        border: '#E5E7EB',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444'
+                    },
+                    fontFamily: { sans: ['Outfit', 'Inter', 'sans-serif'] },
+                    boxShadow: {
+                        'soft': '0 10px 40px -10px rgba(0,0,0,0.05)',
+                        'floating': '0 20px 40px -15px rgba(242,92,5,0.25)',
+                        'nav': '0 -10px 40px -10px rgba(0,0,0,0.05)',
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * { font-family: 'Outfit', 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #F8F4F0; color: #1A1C1E; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .fade-in { animation: fadeIn 0.25s ease-out forwards; }
+        .slide-up { animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .slide-left { animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideLeft { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+        .timeline-node { position: relative; }
+        .timeline-node::before { content: ''; position: absolute; left: 11px; top: 24px; bottom: -8px; width: 2px; background: #E5E7EB; z-index: 0; }
+        .timeline-node:last-child::before { display: none; }
+
+        .spec-item { background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 1rem; padding: 0.85rem; }
+        .spec-item p:first-child { font-size: 11px; font-weight: 700; color: #8A8D93; text-transform: uppercase; letter-spacing: 0.04em; }
+        .spec-item p:last-child { font-size: 14px; font-weight: 800; color: #1A1C1E; margin-top: 2px; }
+    </style>
+</head>
+<body class="min-h-screen antialiased">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-xs transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-4 relative">
+                
+                <!-- Left: Brand Logo & Name -->
+                <div class="flex items-center gap-3">
+                    <button onclick="document.getElementById('mobileMenuDropdown').classList.toggle('hidden')" class="md:hidden p-2 rounded-xl text-slate-600 hover:text-content hover:bg-slate-100 transition-colors focus:outline-none">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <div class="flex items-center gap-2.5 cursor-pointer group" onclick="navigateTo('renter')">
+                        <div class="w-10 h-10 bg-brand text-white rounded-xl shadow-md flex items-center justify-center group-hover:bg-brand-hover transition-colors">
+                            <i data-lucide="car-front" class="w-5.5 h-5.5"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-extrabold text-lg tracking-tight text-content flex items-center gap-1.5 font-display leading-none">
+                                FetanDrive <i data-lucide="shield-check" class="w-4 h-4 text-brand fill-brand/10"></i>
+                            </h1>
+                            <p class="text-[10px] text-slate-400 font-bold tracking-wider uppercase mt-0.5">Addis Car Rentals</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center: Desktop Navigation Links -->
+                <nav class="hidden md:flex items-center gap-1 lg:gap-2">
+                    <button onclick="navigateTo('renter')" class="px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-content hover:bg-slate-100">
+                        <i data-lucide="compass" class="w-3.5 h-3.5"></i> Explore Fleet
+                    </button>
+                    <button onclick="navigateTo('owner')" class="px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-content hover:bg-slate-100">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> List a Car
+                    </button>
+                    <button onclick="toggleSavedView()" class="px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-content hover:bg-slate-100">
+                        <i data-lucide="heart" class="w-3.5 h-3.5"></i> <span>Saved</span>
+                        <span id="savedCountDesk" class="bg-brand text-white text-[10px] font-black px-1.5 py-0.5 rounded-full ml-0.5 hidden">0</span>
+                    </button>
+                </nav>
+
+                <!-- Right: Bilingual Toggle, Post Car CTA, Account Dropdown -->
+                <div class="flex items-center gap-2.5">
+                    <button class="h-9 px-3 bg-slate-100 hover:bg-slate-200/80 rounded-full flex items-center gap-1.5 text-content transition-colors text-xs font-black border border-slate-200/60 shrink-0">
+                        <i data-lucide="globe" class="w-3.5 h-3.5 text-brand"></i>
+                        <span class="text-brand font-black">EN</span>
+                        <span class="text-slate-300">|</span>
+                        <span class="text-slate-400">አማ</span>
+                    </button>
+
+                    <button onclick="toggleNotifications()" class="w-9 h-9 bg-slate-100 hover:bg-slate-200/80 rounded-full flex items-center justify-center text-slate-700 transition-colors relative border border-slate-200/60">
+                        <i data-lucide="bell" class="w-4 h-4"></i>
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full"></span>
+                    </button>
+
+                    <button onclick="navigateTo('owner')" class="bg-brand hover:bg-brand-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-full shadow-md flex items-center gap-1.5 transition-all active:scale-95">
+                        <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
+                        <span class="hidden sm:inline">Post Car</span>
+                    </button>
+
+                    <div class="relative">
+                        <button onclick="toggleUserMenu()" class="h-9 px-3 bg-slate-100 hover:bg-slate-200/80 rounded-full flex items-center gap-2 text-content transition-colors border border-slate-200/60">
+                            <i data-lucide="user" class="w-4 h-4 text-slate-600"></i>
+                            <span id="headerUserName" class="text-xs font-bold hidden sm:inline">Sign In</span>
+                        </button>
+                        <!-- User Menu Dropdown -->
+                        <div id="userMenu" class="hidden absolute top-11 right-0 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 scale-in">
+                            <div id="authMenuHeader" class="px-4 py-3 border-b border-slate-100">
+                                <p class="text-xs text-muted font-medium">Welcome to FetanDrive</p>
+                                <button onclick="openAuthModal('signin')" class="mt-2 text-xs font-bold bg-brand hover:bg-brand-hover text-white w-full py-2 rounded-xl shadow-sm transition-colors">Sign In / Sign Up</button>
+                            </div>
+                            <div id="loggedInMenuHeader" class="hidden px-4 py-3 border-b border-slate-100">
+                                <p class="text-sm font-bold text-content" id="menuProfileName">Bekele Tadesse</p>
+                                <p class="text-[10px] text-success font-bold flex items-center gap-1"><i data-lucide="shield-check" class="w-3 h-3"></i> Verified Account</p>
+                            </div>
+                            <div class="py-1">
+                                <button onclick="navigateTo('profile')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-50 flex items-center gap-2 text-slate-700"><i data-lucide="user-check" class="w-4 h-4 text-slate-400"></i> User Account</button>
+                                <button onclick="navigateTo('owner')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-50 flex items-center gap-2 text-slate-700"><i data-lucide="car" class="w-4 h-4 text-slate-400"></i> My Garage</button>
+                                <button onclick="toggleSavedView()" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-50 flex items-center justify-between text-slate-700">
+                                    <span class="flex items-center gap-2"><i data-lucide="heart" class="w-4 h-4 text-slate-400"></i> Saved Vehicles</span>
+                                    <span id="savedCountDropdown" class="bg-brand/10 text-brand text-[10px] font-bold px-2 py-0.5 rounded-full hidden">0</span>
+                                </button>
+                                <button onclick="navigateTo('admin')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-50 flex items-center gap-2 text-brand font-bold"><i data-lucide="briefcase" class="w-4 h-4"></i> Broker Console</button>
+                            </div>
+                            <div id="logoutSection" class="hidden py-1 border-t border-slate-100">
+                                <button onclick="signOut()" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-50 flex items-center gap-2 text-danger"><i data-lucide="log-out" class="w-4 h-4 text-danger"></i> Sign Out</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Drawer Dropdown -->
+        <div id="mobileMenuDropdown" class="hidden md:hidden border-t border-slate-200/80 bg-white px-4 py-4 space-y-3 shadow-lg fade-in">
+            <div class="grid grid-cols-1 gap-1">
+                <button onclick="navigateTo('renter')" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5 text-slate-700 hover:bg-slate-100"><i data-lucide="compass" class="w-4 h-4 text-brand"></i> Explore Fleet</button>
+                <button onclick="navigateTo('owner')" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5 text-slate-700 hover:bg-slate-100"><i data-lucide="plus-circle" class="w-4 h-4 text-brand"></i> List Your Car</button>
+                <button onclick="toggleSavedView()" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center justify-between">
+                    <span class="flex items-center gap-2.5"><i data-lucide="heart" class="w-4 h-4 text-slate-400"></i> Saved Vehicles</span>
+                </button>
+            </div>
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <button onclick="navigateTo('profile')" class="text-xs font-bold text-slate-600 hover:text-content">User Account</button>
+                <button onclick="navigateTo('admin')" class="text-xs font-extrabold text-brand hover:underline">Broker Console</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12">
+
+        <!-- ==================== VIEW 1: RENTER MARKETPLACE (COMPACT) ==================== -->
+        <section id="renterView" class="view-pane space-y-6 fade-in">
+            
+            <!-- WEB HERO SECTION -->
+            <div class="relative rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 sm:p-10 md:p-14 text-white shadow-2xl border border-slate-800 overflow-hidden">
+                <!-- Subtle Decorative Automotive Backdrop Graphic -->
+                <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand/20 via-transparent to-transparent pointer-events-none"></div>
+                <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-brand/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute top-1/2 left-0 w-72 h-72 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="relative z-10 max-w-4xl mx-auto text-center space-y-4">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-bold text-brand uppercase tracking-widest shadow-inner">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                        <span>Verified Local Broker Network • Addis Ababa</span>
+                    </div>
+
+                    <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1] font-display">
+                        The Premier Managed Car Rental Network in Addis Ababa.
+                    </h1>
+
+                    <p class="text-xs sm:text-sm md:text-base text-slate-300 font-medium max-w-2xl mx-auto leading-relaxed">
+                        Rent verified vehicles directly from Addis Ababa's top fleet owners. Fully managed with broker protection across Bole, Sarbet, Kazanchis, and CMC.
+                    </p>
+
+                    <!-- INTEGRATED HERO SEARCH & FILTER CONTAINER -->
+                    <div class="pt-4 text-left">
+                        <div class="bg-white/95 backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-2xl border border-white/20 text-slate-900 space-y-4">
+                            
+                            <!-- Row 1: Search Input & Primary Filters -->
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                                <!-- Search Bar -->
+                                <div class="md:col-span-5 relative">
+                                    <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                                    <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Search Toyota, Vitz, SUV..." class="w-full bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-slate-200 focus:border-brand rounded-xl pl-10 pr-3 py-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition-all placeholder:text-slate-400">
+                                </div>
+
+                                <!-- Zone Select -->
+                                <div class="md:col-span-3">
+                                    <select id="zoneFilter" onchange="applyFilters()" class="w-full bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-slate-200 focus:border-brand rounded-xl px-3 py-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition-all cursor-pointer">
+                                        <option value="all">Any Location</option>
+                                        <option value="Bole">Bole</option>
+                                        <option value="Sarbet">Sarbet</option>
+                                        <option value="CMC">CMC</option>
+                                        <option value="Kazanchis">Kazanchis</option>
+                                    </select>
+                                </div>
+
+                                <!-- Driver Mode Select -->
+                                <div class="md:col-span-2">
+                                    <select id="driverFilter" onchange="applyFilters()" class="w-full bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-slate-200 focus:border-brand rounded-xl px-3 py-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition-all cursor-pointer">
+                                        <option value="all">Any Mode</option>
+                                        <option value="Self-Drive">Self-Drive</option>
+                                        <option value="With Driver">With Driver</option>
+                                    </select>
+                                </div>
+
+                                <!-- Smart Match CTA -->
+                                <div class="md:col-span-2">
+                                    <button onclick="openSmartMatchModal()" class="w-full bg-brand hover:bg-brand-hover text-white py-3 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0">
+                                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                        <span>Smart Match</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: Category Filter Pills -->
+                            <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200/60">
+                                <div class="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-1">
+                                    <span class="text-[11px] font-extrabold uppercase text-slate-400 mr-1 tracking-wider hidden sm:inline">Category:</span>
+                                    <div id="categoryContainer" class="flex items-center gap-1.5 min-w-max"></div>
+                                </div>
+
+                                <button onclick="resetFilters()" class="text-xs font-bold text-brand hover:underline flex items-center gap-1 shrink-0">
+                                    <i data-lucide="x" class="w-3.5 h-3.5"></i> Reset Filters
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vehicle Fleet Grid -->
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="gridTitle" class="text-xl font-bold tracking-tight">Available Fleet</h2>
+                    <span id="fleetCountBadge" class="text-xs font-bold text-muted bg-white px-3 py-1 rounded-full shadow-xs">0 Vehicles</span>
+                </div>
+                <div id="vehicleGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+            </div>
+
+        </section>
+
+        <!-- ==================== VIEW 2: PRODUCT DETAIL PAGE (Requirement #2 & #6) ==================== -->
+        <section id="productDetailView" class="view-pane hidden space-y-6 max-w-4xl mx-auto fade-in">
+            
+            <!-- Top Action Navigation Header -->
+            <div class="flex items-center justify-between">
+                <button onclick="navigateTo('renter')" class="bg-white px-4 py-2 rounded-full shadow-soft text-xs font-bold text-content hover:bg-slate-50 flex items-center gap-2 border border-slate-100">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Fleet
+                </button>
+                <div class="flex items-center gap-2">
+                    <button id="pShareBtn" class="w-10 h-10 bg-white rounded-full shadow-soft flex items-center justify-center text-telegram border border-slate-100">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                    <button id="pSaveBtn" class="w-10 h-10 bg-white rounded-full shadow-soft flex items-center justify-center text-content border border-slate-100">
+                        <i data-lucide="heart" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hero Image Gallery -->
+            <div class="bg-white rounded-3xl p-3 shadow-soft border border-slate-100 space-y-3">
+                <div class="relative aspect-[16/9] rounded-2xl overflow-hidden bg-background">
+                    <img id="pMainImg" src="" class="w-full h-full object-cover">
+                    <div class="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-content shadow-sm flex items-center gap-1">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-success"></i> Verified Vehicle
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Info -->
+            <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <span id="pCategory" class="text-[10px] font-bold uppercase tracking-wider text-brand bg-brand/10 px-2.5 py-1 rounded-md mb-2 inline-block">Category</span>
+                    <h1 id="pTitle" class="text-2xl sm:text-3xl font-extrabold text-content tracking-tight">Vehicle Title</h1>
+                    <p class="text-xs font-semibold text-muted flex items-center gap-1 mt-1">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> <span id="pZone">Location</span>
+                    </p>
+                </div>
+                <div class="sm:text-right">
+                    <span id="pPrice" class="text-3xl font-black text-brand tracking-tight">0</span>
+                    <span class="text-xs font-bold text-muted">ETB / day</span>
+                </div>
+            </div>
+
+            <!-- SPECIFICATIONS GRID (Requirement #6 & Mekina-style) -->
+            <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100 space-y-4">
+                <h3 class="text-lg font-bold text-content flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-5 h-5 text-brand"></i> Full Specifications
+                </h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <div class="spec-item"><p>Brand</p><p id="pBrand">Toyota</p></div>
+                    <div class="spec-item"><p>Model</p><p id="pModel">Vitz</p></div>
+                    <div class="spec-item"><p>Year</p><p id="pYear">2022</p></div>
+                    <div class="spec-item"><p>Fuel Type</p><p id="pFuel">Petrol</p></div>
+                    <div class="spec-item"><p>Transmission</p><p id="pTrans">Automatic</p></div>
+                    <div class="spec-item"><p>Body Type</p><p id="pBody">Hatchback</p></div>
+                    <div class="spec-item"><p>Color</p><p id="pColor">Silver</p></div>
+                    <div class="spec-item"><p>Engine / CC</p><p id="pCC">1.3L</p></div>
+                    <div class="spec-item"><p>Mileage</p><p id="pMil">45,000 km</p></div>
+                    <div class="spec-item"><p>Condition</p><p id="pCond">Used in Ethiopia</p></div>
+                    <div class="spec-item"><p>Seats</p><p id="pSeats">5</p></div>
+                    <div class="spec-item"><p>Driver Mode</p><p id="pDriver">Self-Drive</p></div>
+                </div>
+            </div>
+
+            <!-- DESCRIPTION SECTION (Requirement #6) -->
+            <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100 space-y-3">
+                <h3 class="text-lg font-bold text-content flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5 text-brand"></i> Description
+                </h3>
+                <p id="pDescription" class="text-sm text-slate-600 leading-relaxed font-medium">
+                    Well-maintained vehicle in excellent condition. Ideal for city driving or long-distance rentals across Ethiopia. Clean interior, smooth engine, and verified paperwork.
+                </p>
+            </div>
+
+            <!-- Broker Protection & Supplier Card -->
+            <div class="bg-brand/5 border border-brand/20 rounded-3xl p-6 space-y-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand"><i data-lucide="building-2" class="w-5 h-5"></i></div>
+                    <div>
+                        <p id="pSupplierName" class="text-sm font-extrabold text-content">Supplier Name</p>
+                        <p class="text-xs text-muted font-semibold">FetanDrive Verified Partner</p>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-600 font-medium pt-2 border-t border-brand/10">
+                    <i data-lucide="lock" class="inline w-3.5 h-3.5 text-brand"></i> All inquiries and bookings are coordinated directly through FetanDrive to guarantee rental safety.
+                </p>
+            </div>
+
+            <!-- Sticky Booking Bar for Product Detail Page -->
+            <div class="bg-white rounded-3xl p-5 shadow-soft border border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <div>
+                        <label class="text-[10px] font-bold text-muted uppercase">Pick-up</label>
+                        <input type="date" id="pStart" onchange="calcProductPageTotal()" class="w-full bg-background rounded-xl p-2.5 text-xs font-bold text-content">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-muted uppercase">Return</label>
+                        <input type="date" id="pEnd" onchange="calcProductPageTotal()" class="w-full bg-background rounded-xl p-2.5 text-xs font-bold text-content">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+                    <div>
+                        <p class="text-[10px] font-bold text-muted uppercase">Total Sum</p>
+                        <p id="pCalculatedSum" class="text-xl font-black text-brand">0 ETB</p>
+                    </div>
+                    <button onclick="requestBookingFromPage()" class="bg-brand hover:bg-brand-hover text-white px-8 py-3.5 rounded-full font-bold text-sm shadow-floating transition-all">
+                        Request Booking
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ==================== VIEW 3: OWNER LISTING WIZARD ==================== -->
+        <section id="ownerView" class="view-pane hidden space-y-6 max-w-3xl mx-auto fade-in">
+            <div class="text-center space-y-2 pt-4">
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">List your car. We find renters.</h1>
+                <p class="text-muted text-xs sm:text-sm max-w-lg mx-auto">FetanDrive coordinates all bookings so you earn hassle-free.</p>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-soft p-6 md:p-8 border border-slate-100">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <span id="wizardStepNum" class="text-brand font-bold text-[10px] uppercase tracking-widest block mb-1">Step 1 of 4</span>
+                        <h3 id="wizardStepTitle" class="text-lg font-bold">Vehicle Specifications</h3>
+                    </div>
+                    <div class="flex gap-1">
+                        <div id="stepInd1" class="w-6 h-2 rounded-full bg-brand"></div>
+                        <div id="stepInd2" class="w-6 h-2 rounded-full bg-background"></div>
+                        <div id="stepInd3" class="w-6 h-2 rounded-full bg-background"></div>
+                        <div id="stepInd4" class="w-6 h-2 rounded-full bg-background"></div>
+                    </div>
+                </div>
+
+                <!-- Wizard Steps -->
+                <div id="wizardStep1" class="wizard-pane space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="text-[10px] font-bold text-content ml-2">Make *</label><input type="text" id="wMake" placeholder="Toyota" class="w-full bg-background rounded-xl p-3 text-xs font-semibold focus:outline-none"></div>
+                        <div><label class="text-[10px] font-bold text-content ml-2">Model *</label><input type="text" id="wModel" placeholder="Vitz" class="w-full bg-background rounded-xl p-3 text-xs font-semibold focus:outline-none"></div>
+                        <div><label class="text-[10px] font-bold text-content ml-2">Year *</label><input type="number" id="wYear" value="2022" class="w-full bg-background rounded-xl p-3 text-xs font-semibold focus:outline-none"></div>
+                        <div><label class="text-[10px] font-bold text-content ml-2">Engine (CC)</label><input type="text" id="wCC" placeholder="1.3L" class="w-full bg-background rounded-xl p-3 text-xs font-semibold focus:outline-none"></div>
+                        <div><label class="text-[10px] font-bold text-content ml-2">Mileage (km)</label><input type="text" id="wMileage" placeholder="45,000" class="w-full bg-background rounded-xl p-3 text-xs font-semibold focus:outline-none"></div>
+                        <div><label class="text-[10px] font-bold text-content ml-2">Condition</label><select id="wCondition" class="w-full bg-background rounded-xl p-3 text-xs font-semibold focus:outline-none"><option>Used in Ethiopia</option><option>Used Abroad</option><option>New</option></select></div>
+                    </div>
+                    <button onclick="goWizard(2)" class="w-full bg-content text-white py-3.5 rounded-full font-bold text-xs mt-2">Next: Pricing & Rental Mode</button>
+                </div>
+
+                <div id="wizardStep2" class="wizard-pane hidden space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-content ml-2 block mb-1">Daily Rate (ETB) *</label>
+                        <input type="number" id="wRate" placeholder="3500" class="w-full bg-background rounded-xl p-3 text-base font-bold text-brand focus:outline-none">
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="goWizard(1)" class="w-1/3 bg-background text-content py-3 rounded-full font-bold text-xs">Back</button>
+                        <button onclick="goWizard(3)" class="w-2/3 bg-content text-white py-3 rounded-full font-bold text-xs">Next: Requirements</button>
+                    </div>
+                </div>
+
+                <div id="wizardStep3" class="wizard-pane hidden space-y-4">
+                    <label class="text-[10px] font-bold text-content ml-2 block">Check Renter Requirements</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <label class="bg-background p-3 rounded-xl flex items-center gap-2 cursor-pointer"><input type="checkbox" checked class="accent-brand"><span class="font-semibold">Kebele ID</span></label>
+                        <label class="bg-background p-3 rounded-xl flex items-center gap-2 cursor-pointer"><input type="checkbox" checked class="accent-brand"><span class="font-semibold">Driver's License</span></label>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="goWizard(2)" class="w-1/3 bg-background text-content py-3 rounded-full font-bold text-xs">Back</button>
+                        <button onclick="goWizard(4)" class="w-2/3 bg-content text-white py-3 rounded-full font-bold text-xs">Next: Privacy & Submit</button>
+                    </div>
+                </div>
+
+                <div id="wizardStep4" class="wizard-pane hidden space-y-4">
+                    <div class="bg-brand/5 border border-brand/20 p-4 rounded-xl space-y-2">
+                        <span class="text-xs font-extrabold text-brand flex items-center gap-1.5"><i data-lucide="shield-check" class="w-4 h-4"></i> Privacy Shield</span>
+                        <p class="text-xs text-content font-medium">Your contact details remain shielded so FetanDrive coordinates all rentals safely.</p>
+                        <textarea id="wDesc" oninput="testSanitizer(this.value)" rows="2" placeholder="Describe car condition..." class="w-full bg-white rounded-lg p-2.5 text-xs focus:outline-none"></textarea>
+                        <p id="sanitizerMsg" class="text-[10px] font-semibold text-muted"></p>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="goWizard(3)" class="w-1/3 bg-background text-content py-3 rounded-full font-bold text-xs">Back</button>
+                        <button onclick="submitListing()" class="w-2/3 bg-brand text-white py-3 rounded-full font-bold text-xs shadow-floating">Submit Vehicle</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Garage -->
+            <div class="space-y-3">
+                <h3 class="text-lg font-bold tracking-tight">My Listed Garage</h3>
+                <div id="myGarageList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 4: USER PROFILE PAGE (Requirement #5) ==================== -->
+        <section id="profileView" class="view-pane hidden space-y-6 max-w-3xl mx-auto fade-in">
+            <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100 flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+                <div class="w-20 h-20 rounded-full bg-brand/10 text-brand flex items-center justify-center font-extrabold text-2xl border-2 border-brand/20">BT</div>
+                <div class="space-y-1">
+                    <h2 class="text-2xl font-extrabold text-content">Bekele Tadesse</h2>
+                    <p class="text-xs font-bold text-success flex items-center justify-center sm:justify-start gap-1"><i data-lucide="check-circle" class="w-4 h-4"></i> Verified FetanDrive Member</p>
+                    <p class="text-xs text-muted">Bole, Addis Ababa · Member since 2025</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-white p-4 rounded-2xl shadow-soft border border-slate-100 text-center"><p class="text-[10px] uppercase font-bold text-muted">Active Rentals</p><p class="text-xl font-black text-brand mt-1">1</p></div>
+                <div class="bg-white p-4 rounded-2xl shadow-soft border border-slate-100 text-center"><p class="text-[10px] uppercase font-bold text-muted">Listed Fleet</p><p class="text-xl font-black text-content mt-1">2</p></div>
+                <div class="bg-white p-4 rounded-2xl shadow-soft border border-slate-100 text-center"><p class="text-[10px] uppercase font-bold text-muted">Saved Cars</p><p class="text-xl font-black text-content mt-1" id="profileSavedCount">0</p></div>
+            </div>
+
+            <!-- Active Bookings -->
+            <div class="bg-white rounded-3xl p-6 shadow-soft border border-slate-100 space-y-4">
+                <h3 class="font-bold text-lg text-content flex items-center gap-2"><i data-lucide="calendar" class="w-5 h-5 text-brand"></i> Active Booking Status</h3>
+                <div class="p-4 bg-background rounded-2xl border border-slate-100 space-y-3">
+                    <div class="flex justify-between items-center"><span class="text-xs font-mono font-bold text-brand">#FD-1042</span><span class="text-[10px] bg-success/10 text-success font-bold px-2 py-0.5 rounded">Active Rental</span></div>
+                    <p class="font-bold text-sm text-content">Toyota Vitz (2022)</p>
+                    <p class="text-xs text-muted">Dates: Aug 22 → Aug 26 · Total: 14,000 ETB</p>
+                    <button onclick="openBookingTimelineModal()" class="w-full bg-white text-content py-2 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-50">View Live Timeline</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 5: BROKER CONSOLE ==================== -->
+        <section id="adminView" class="view-pane hidden space-y-6 fade-in">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-extrabold tracking-tight">Broker Operations</h2>
+            </div>
+            <!-- Kanban -->
+            <div class="bg-white rounded-3xl p-5 shadow-soft border border-slate-100 overflow-x-auto hide-scrollbar">
+                <div class="flex gap-4 min-w-max" id="kanbanBoard"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Traditional Web Footer -->
+    <footer class="bg-slate-900 text-slate-300 border-t border-slate-800 mt-16 pt-14 pb-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-slate-800">
+                
+                <!-- Brand Column -->
+                <div class="md:col-span-5 space-y-4">
+                    <div onclick="navigateTo('renter')" class="cursor-pointer inline-flex items-center gap-3">
+                        <div class="w-10 h-10 bg-brand rounded-xl shadow-lg flex items-center justify-center text-white">
+                            <i data-lucide="car-front" class="w-5 h-5"></i>
+                        </div>
+                        <span class="font-extrabold text-xl tracking-tight text-white flex items-center gap-1.5 font-display">
+                            FetanDrive <i data-lucide="shield-check" class="w-4 h-4 text-brand"></i>
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed max-w-sm">
+                        The premier managed car rental network in Addis Ababa. Connecting verified vehicle listers with trusted renters through our dedicated local broker network.
+                    </p>
+                    <div class="flex items-center gap-2 pt-2">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Broker Network Active
+                        </span>
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                            Addis Ababa, ET
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Quick Links Column -->
+                <div class="md:col-span-3 space-y-4">
+                    <h4 class="text-xs font-extrabold uppercase tracking-widest text-slate-100 font-display">Quick Links</h4>
+                    <ul class="space-y-2.5 text-xs font-medium">
+                        <li>
+                            <button onclick="navigateTo('renter')" class="hover:text-white transition-colors flex items-center gap-1.5 text-slate-300">
+                                Explore Fleet
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="navigateTo('owner')" class="hover:text-white transition-colors flex items-center gap-1.5 text-slate-300">
+                                List Your Car
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="toggleSavedView()" class="hover:text-white transition-colors flex items-center gap-1.5 text-slate-300">
+                                Saved Vehicles
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="navigateTo('profile')" class="hover:text-white transition-colors flex items-center gap-1.5 text-slate-300">
+                                User Account & Garage
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="navigateTo('admin')" class="text-brand hover:text-brand-hover transition-colors font-semibold flex items-center gap-1.5">
+                                Broker Operations Console
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Contact Column -->
+                <div class="md:col-span-4 space-y-4">
+                    <h4 class="text-xs font-extrabold uppercase tracking-widest text-slate-100 font-display">Contact & Location</h4>
+                    <div class="space-y-3 text-xs font-medium text-slate-300">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-brand mt-0.5">
+                                <i data-lucide="phone" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-slate-400 uppercase font-semibold">Broker Helpline</p>
+                                <p class="font-bold text-white tracking-wide text-sm">+251 911 234 567</p>
+                                <p class="text-[11px] text-slate-400">Available 8:00 AM - 8:00 PM (EAT)</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-sky-400 mt-0.5">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-slate-400 uppercase font-semibold">Telegram Channel & Broker</p>
+                                <a href="https://t.me" target="_blank" class="font-bold text-sky-400 hover:underline inline-flex items-center gap-1">
+                                    @FetanDrive_Broker <i data-lucide="external-link" class="w-3 h-3"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-amber-400 mt-0.5">
+                                <i data-lucide="map-pin" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-slate-400 uppercase font-semibold">Main Office</p>
+                                <p class="font-medium text-slate-200">Bole Road, Friendship Center 3rd Floor</p>
+                                <p class="text-[11px] text-slate-400">Addis Ababa, Ethiopia</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Bottom Bar -->
+            <div class="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+                <p>© 2026 FetanDrive. All rights reserved.</p>
+                <div class="flex items-center gap-6">
+                    <span class="hover:text-slate-200 transition-colors cursor-pointer">Terms of Service</span>
+                    <span class="hover:text-slate-200 transition-colors cursor-pointer">Broker Agreement</span>
+                    <span class="hover:text-slate-200 transition-colors cursor-pointer">Privacy Policy</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Auth Modal (Sign In / Sign Up) (Requirement #4) -->
+    <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-content/60 backdrop-blur-sm p-4">
+        <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl relative slide-up">
+            <button onclick="closeModal('authModal')" class="absolute top-5 right-5 text-muted hover:text-content bg-background w-8 h-8 rounded-full flex items-center justify-center"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <div class="w-12 h-12 bg-brand/10 text-brand rounded-2xl flex items-center justify-center mb-4"><i data-lucide="user" class="w-6 h-6"></i></div>
+            <h3 class="text-xl font-extrabold text-content mb-1" id="authTitle">Sign In to FetanDrive</h3>
+            <p class="text-xs text-muted mb-5">Enter your phone number to access saved vehicles and bookings.</p>
+            <div class="space-y-3">
+                <input type="tel" id="authPhone" placeholder="+251 9XX XXX XXX" class="w-full bg-background rounded-2xl p-3.5 text-xs font-semibold focus:outline-none">
+                <button onclick="processAuth()" class="w-full bg-content text-white py-3.5 rounded-full font-bold text-xs shadow-soft">Continue with Phone</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Summary & Confirm Modal -->
+    <div id="bookingSummaryModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4">
+        <div class="bg-white max-w-lg w-full rounded-3xl p-6 md:p-8 shadow-2xl relative scale-in border border-slate-100">
+            <button onclick="closeModal('bookingSummaryModal')" class="absolute top-5 right-5 text-muted hover:text-content bg-slate-50 w-8 h-8 rounded-full flex items-center justify-center"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <h3 class="text-xl font-extrabold mb-4">Confirm Rental Request</h3>
+            <div class="bg-background rounded-2xl p-4 space-y-2 text-xs font-semibold mb-4">
+                <div class="flex justify-between"><span>Car</span><span id="cTitle" class="font-bold">Vehicle</span></div>
+                <div class="flex justify-between"><span>Daily Rate</span><span id="cRate">0 ETB</span></div>
+                <div class="flex justify-between"><span>Duration</span><span id="cDays">0 Days</span></div>
+                <div class="flex justify-between border-t border-border pt-2 text-brand font-black text-sm"><span>Estimated Total</span><span id="cTotal">0 ETB</span></div>
+            </div>
+            <button onclick="confirmBooking()" class="w-full bg-brand text-white py-3.5 rounded-full font-bold text-xs shadow-floating">Confirm & Send</button>
+        </div>
+    </div>
+
+    <!-- Booking Timeline Modal -->
+    <div id="bookingTimelineModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-content/60 backdrop-blur-sm p-4">
+        <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl relative slide-up text-center">
+            <button onclick="closeModal('bookingTimelineModal')" class="absolute top-5 right-5 text-muted hover:text-content bg-slate-50 w-8 h-8 rounded-full flex items-center justify-center"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <div class="w-12 h-12 bg-success/10 text-success rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="check" class="w-6 h-6"></i></div>
+            <h3 class="text-xl font-extrabold mb-1">Booking #FD-1042</h3>
+            <p class="text-xs text-muted mb-6">Status: Availability Confirmed</p>
+            <button onclick="closeModal('bookingTimelineModal')" class="w-full bg-background text-content py-3.5 rounded-full font-bold text-xs">Close</button>
+        </div>
+    </div>
+
+    <!-- Notifications Drawer Modal -->
+    <div id="notifModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-content/60 backdrop-blur-sm p-4">
+        <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl relative slide-up">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <h3 class="font-bold text-base text-content flex items-center gap-2"><i data-lucide="bell" class="w-4 h-4 text-brand"></i> Notifications</h3>
+                <button onclick="closeModal('notifModal')" class="text-muted hover:text-content bg-background w-7 h-7 rounded-full flex items-center justify-center"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div class="space-y-2 text-xs font-medium">
+                <div class="p-3 bg-brand/5 rounded-2xl border border-brand/10"><p class="font-bold text-brand">Booking Confirmed</p><p class="text-content mt-0.5">Toyota Vitz #FD-1042 matched successfully.</p></div>
+            </div>
+            <button onclick="closeModal('notifModal')" class="w-full bg-background text-content py-3 rounded-full font-bold text-xs mt-4">Close</button>
+        </div>
+    </div>
+
+    <!-- Smart Match Modal -->
+    <div id="smartMatchModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4">
+        <div class="bg-white max-w-lg w-full rounded-3xl p-6 md:p-8 shadow-2xl relative scale-in border border-slate-100" id="smartContainer">
+            <button onclick="closeModal('smartMatchModal')" class="absolute top-5 right-5 text-muted hover:text-content bg-slate-50 w-8 h-8 rounded-full flex items-center justify-center"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <div id="smartForm" class="space-y-4">
+                <h3 class="text-xl font-extrabold">Smart Match</h3>
+                <p class="text-xs text-muted">Tell us what you need and our brokers will source it.</p>
+                <input type="text" placeholder="Vehicle type or criteria..." class="w-full bg-background rounded-xl p-3 text-xs font-semibold focus:outline-none">
+                <button onclick="submitSmartMatch()" class="w-full bg-content text-white py-3.5 rounded-full font-bold text-xs">Send Request</button>
+            </div>
+            <div id="smartSuccess" class="hidden text-center py-4 space-y-3">
+                <div class="w-12 h-12 bg-success/10 text-success rounded-full flex items-center justify-center mx-auto"><i data-lucide="check" class="w-6 h-6"></i></div>
+                <h4 class="font-bold text-base">Request Dispatched</h4>
+                <button onclick="closeModal('smartMatchModal')" class="w-full bg-background text-content py-3 rounded-full font-bold text-xs">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broker Command Center Slide-Over -->
+    <div id="commandModal" class="fixed inset-0 z-50 hidden bg-content/40 backdrop-blur-sm">
+        <div class="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl slide-left overflow-y-auto p-6 space-y-5">
+            <div class="flex items-center justify-between border-b pb-3">
+                <h3 class="font-bold text-base" id="cmdRef">FD-0000</h3>
+                <button onclick="closeModal('commandModal')" class="text-muted"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-2 text-xs font-medium">
+                <p>Renter: <span id="cmdRenter" class="font-bold">Name</span></p>
+                <p>Supplier: <span id="cmdOwner" class="font-bold">Name</span></p>
+                <p>Gross: <span id="cmdGross" class="font-bold text-brand">0 ETB</span></p>
+            </div>
+            <button onclick="closeModal('commandModal'); showToast('Booking advanced');" class="w-full bg-content text-white py-3 rounded-full font-bold text-xs">Advance Booking</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[70] hidden">
+        <div class="bg-content text-white px-5 py-3 rounded-full text-xs font-bold shadow-2xl flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-brand"></i>
+            <span id="toastMsg">Success</span>
+        </div>
+    </div>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        const state = {
+            role: 'renter',
+            viewMode: 'explore', 
+            user: { loggedIn: false, name: 'Bekele Tadesse' },
+            savedIds: new Set(['v2']),
+            categories: [
+                { id: 'all', label: 'All', icon: 'car' },
+                { id: 'Economy', label: 'Economy', icon: 'gauge' },
+                { id: 'SUV', label: 'SUV & 4x4', icon: 'mountain' },
+                { id: 'Luxury', label: 'Luxury', icon: 'gem' },
+                { id: 'Van', label: 'Vans', icon: 'bus' }
+            ],
+            vehicles: [
+                { id: 'v1', make: 'Toyota', model: 'Vitz', year: 2022, category: 'Economy', zone: 'Bole', dailyRate: 3500, driverMode: 'Self-Drive', transmission: 'Auto', fuel: 'Petrol', body: 'Hatchback', color: 'Silver', cc: '1.3L', mileage: '45,000 km', condition: 'Used in Ethiopia', supplier: {name: 'Bekele Auto'}, collateral: ['Kebele ID', 'Deposit'], description: 'Clean hatchback, excellent fuel economy, serviced regularly.', image: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop' },
+                { id: 'v2', make: 'Hyundai', model: 'Tucson', year: 2023, category: 'SUV', zone: 'Sarbet', dailyRate: 9500, driverMode: 'With Driver', transmission: 'Auto', fuel: 'Diesel', body: 'SUV', color: 'White', cc: '2.0L', mileage: '12,000 km', condition: 'Used Abroad', supplier: {name: 'Sami Motors'}, collateral: ['ID', 'License'], description: 'Modern SUV with leather interior, high ground clearance, perfect for trips.', image: 'https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?q=80&w=800&auto=format&fit=crop' },
+                { id: 'v3', make: 'Porsche', model: '911 GT3', year: 2024, category: 'Luxury', zone: 'Kazanchis', dailyRate: 24000, driverMode: 'With Driver', transmission: 'Auto', fuel: 'Petrol', body: 'Coupe', color: 'Black', cc: '4.0L', mileage: '2,500 km', condition: 'New', supplier: {name: 'Mulugeta VIP'}, collateral: ['Passport', 'Deposit'], description: 'Executive sports car for VIP travel and special events in Addis.', image: 'https://images.unsplash.com/photo-1503376760367-1154fd1f5686?q=80&w=800&auto=format&fit=crop' },
+                { id: 'v4', make: 'Toyota', model: 'Land Cruiser', year: 2021, category: 'SUV', zone: 'CMC', dailyRate: 18000, driverMode: 'Both', transmission: 'Auto', fuel: 'Diesel', body: 'SUV', color: 'Gray', cc: '4.5L', mileage: '68,000 km', condition: 'Used in Ethiopia', supplier: {name: 'Ethio Fleet'}, collateral: ['Passport', 'Deposit'], description: 'Heavy-duty 4x4 V8 Land Cruiser for rugged Ethiopian roads.', image: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?q=80&w=800&auto=format&fit=crop' }
+            ],
+            bookings: [
+                { id: 'b1', ref: 'FD-1042', renter: 'Ahmed M.', car: 'Toyota Vitz', val: 14000, stage: 'NEW_REQUEST', lister: 'Bekele Auto' },
+                { id: 'b2', ref: 'FD-2091', renter: 'Sara T.', car: 'Hyundai Tucson', val: 38000, stage: 'VEHICLE_MATCHED', lister: 'Sami Motors' }
+            ],
+            myGarage: [],
+            filters: { search: '', zone: 'all', category: 'all' },
+            selectedCar: null
+        };
+
+        const formatETB = (val) => Number(val).toLocaleString() + ' ETB';
+
+        window.onload = () => {
+            renderCategories();
+            updateSavedCounters();
+            renderMobileNav();
+            navigateTo('renter');
+        };
+
+        function navigateTo(viewName) {
+            document.querySelectorAll('.view-pane').forEach(el => el.classList.add('hidden'));
+            if (viewName === 'renter') {
+                document.getElementById('renterView').classList.remove('hidden');
+                renderGrid();
+            } else if (viewName === 'owner') {
+                document.getElementById('ownerView').classList.remove('hidden');
+                renderGarage();
+            } else if (viewName === 'profile') {
+                document.getElementById('profileView').classList.remove('hidden');
+                document.getElementById('profileSavedCount').textContent = state.savedIds.size;
+            } else if (viewName === 'admin') {
+                document.getElementById('adminView').classList.remove('hidden');
+                renderKanban();
+            }
+            state.role = viewName;
+            renderMobileNav();
+            if (window.lucide) lucide.createIcons();
+            window.scrollTo(0,0);
+        }
+
+        // ================= AUTH (Requirement #4) =================
+        function openAuthModal(mode) {
+            document.getElementById('userMenu').classList.add('hidden');
+            document.getElementById('authModal').classList.remove('hidden');
+        }
+
+        function processAuth() {
+            const phone = document.getElementById('authPhone').value;
+            if(!phone) return showToast('Please enter your phone number');
+            state.user.loggedIn = true;
+            document.getElementById('headerUserName').textContent = 'Bekele T.';
+            document.getElementById('authMenuHeader').classList.add('hidden');
+            document.getElementById('loggedInMenuHeader').classList.remove('hidden');
+            document.getElementById('logoutSection').classList.remove('hidden');
+            closeModal('authModal');
+            showToast('Signed in successfully!');
+        }
+
+        function signOut() {
+            state.user.loggedIn = false;
+            document.getElementById('headerUserName').textContent = 'Sign In';
+            document.getElementById('authMenuHeader').classList.remove('hidden');
+            document.getElementById('loggedInMenuHeader').classList.add('hidden');
+            document.getElementById('logoutSection').classList.add('hidden');
+            document.getElementById('userMenu').classList.add('hidden');
+            showToast('Signed out');
+        }
+
+        // ================= MOBILE NAV =================
+        function renderMobileNav() {
+            const nav = document.getElementById('mobileNavInner');
+            let items = [
+                { label: 'Explore', icon: 'search', action: "navigateTo('renter')", active: state.role === 'renter' && state.viewMode === 'explore' },
+                { label: 'Saved', icon: 'heart', action: "toggleSavedView()", active: state.viewMode === 'saved', badge: state.savedIds.size > 0 },
+                { label: 'Post Car', icon: 'plus-circle', action: "navigateTo('owner')", active: state.role === 'owner' },
+                { label: 'Profile', icon: 'user', action: "navigateTo('profile')", active: state.role === 'profile' }
+            ];
+
+            nav.innerHTML = items.map(item => `
+                <button class="flex-1 py-2 flex flex-col items-center gap-1 rounded-xl transition-all ${item.active ? 'text-brand font-bold' : 'text-muted hover:text-content'} relative" onclick="${item.action}">
+                    <i data-lucide="${item.icon}" class="w-5 h-5 ${item.active ? 'fill-brand/10' : ''}"></i>
+                    <span class="text-[10px] font-bold">${item.label}</span>
+                    ${item.badge ? '<span class="absolute top-1 right-5 w-2 h-2 bg-brand rounded-full"></span>' : ''}
+                </button>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // ================= MARKETPLACE =================
+        function updateSavedCounters() {
+            const count = state.savedIds.size;
+            const deskBadge = document.getElementById('savedCountDesk');
+            if(deskBadge) {
+                deskBadge.textContent = count;
+                deskBadge.classList.toggle('hidden', count === 0);
+            }
+            const dropBadge = document.getElementById('savedCountDropdown');
+            if(dropBadge) {
+                dropBadge.textContent = count;
+                dropBadge.classList.toggle('hidden', count === 0);
+            }
+            renderMobileNav(); 
+        }
+
+        function toggleSave(e, id) {
+            e.stopPropagation();
+            if(state.savedIds.has(id)) state.savedIds.delete(id);
+            else state.savedIds.add(id);
+            updateSavedCounters();
+            renderGrid();
+        }
+
+        function toggleSavedView() {
+            state.viewMode = state.viewMode === 'explore' ? 'saved' : 'explore';
+            document.getElementById('gridTitle').textContent = state.viewMode === 'explore' ? 'Available Fleet' : 'Saved Vehicles';
+            navigateTo('renter');
+        }
+
+        function toggleAdvancedFilters() {
+            document.getElementById('advancedFilters').classList.toggle('hidden');
+            document.getElementById('advancedFilters').classList.toggle('flex');
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('zoneFilter').value = 'all';
+            document.getElementById('categoryFilter').value = 'all';
+            state.filters = { search: '', zone: 'all', category: 'all' };
+            renderGrid();
+            showToast('Filters reset');
+        }
+
+        function renderCategories() {
+            document.getElementById('categoryContainer').innerHTML = state.categories.map(c => `
+                <button onclick="setCategory('${c.id}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all font-bold text-xs shrink-0 border ${state.filters.category === c.id ? 'bg-slate-900 text-white border-slate-900 shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'}">
+                    <i data-lucide="${c.icon}" class="w-3 h-3 ${state.filters.category === c.id ? 'text-brand' : 'text-slate-500'}"></i>
+                    ${c.label}
+                </button>
+            `).join('');
+            if(window.lucide) lucide.createIcons();
+        }
+
+        function setCategory(cat) { 
+            state.filters.category = cat; 
+            state.viewMode = 'explore'; 
+            document.getElementById('gridTitle').textContent = 'Available Fleet'; 
+            renderCategories(); 
+            applyFilters(); 
+        }
+
+        function applyFilters() {
+            state.filters.search = document.getElementById('searchInput').value.toLowerCase();
+            state.filters.zone = document.getElementById('zoneFilter').value;
+            renderGrid();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('vehicleGrid');
+            const filtered = state.vehicles.filter(v => {
+                if(state.viewMode === 'saved' && !state.savedIds.has(v.id)) return false;
+                const s = (v.make + ' ' + v.model).toLowerCase().includes(state.filters.search);
+                const z = state.filters.zone === 'all' || v.zone === state.filters.zone;
+                const c = state.filters.category === 'all' || v.category === state.filters.category;
+                return s && z && c;
+            });
+
+            document.getElementById('fleetCountBadge').textContent = `${filtered.length} Vehicles`;
+
+            if(filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 bg-white rounded-3xl border border-slate-100">
+                    <p class="text-sm font-bold text-content mb-1">No vehicles found.</p>
+                    <button onclick="openSmartMatchModal()" class="bg-brand/10 text-brand px-5 py-2 rounded-full font-bold text-xs mt-2">Use Smart Match</button>
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(v => {
+                const isSaved = state.savedIds.has(v.id);
+                return `
+                <div class="bg-white rounded-3xl p-3.5 shadow-card border border-slate-100 flex flex-col group cursor-pointer hover:shadow-soft transition-shadow" onclick="openProductPage('${v.id}')">
+                    <div class="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3 bg-background">
+                        <img src="${v.image}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur px-2.5 py-1 rounded-full text-[9px] font-bold text-content shadow-sm flex items-center gap-1">
+                            <i data-lucide="shield-check" class="w-3 h-3 text-success"></i> Verified
+                        </div>
+                        <button onclick="toggleSave(event, '${v.id}')" class="absolute top-2.5 right-2.5 bg-white/95 w-7 h-7 rounded-full flex items-center justify-center text-content shadow-sm hover:text-brand transition-colors">
+                            <i data-lucide="heart" class="w-3.5 h-3.5 ${isSaved ? 'fill-brand text-brand' : ''}"></i>
+                        </button>
+                    </div>
+                    <div class="flex-1 px-1">
+                        <h3 class="font-extrabold text-lg text-content leading-tight mb-1">${v.make} ${v.model} <span class="text-muted text-xs font-semibold">${v.year}</span></h3>
+                        <p class="text-[11px] text-muted mb-3 font-medium flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${v.zone} • ${v.category}</p>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-border/50 px-1 mt-auto">
+                        <span class="font-black text-xl text-brand tracking-tight">${formatETB(v.dailyRate)}<span class="text-xs text-muted font-semibold">/d</span></span>
+                        <button class="bg-content px-3 py-1.5 rounded-full text-white text-xs font-bold hover:bg-brand transition-colors">Details</button>
+                    </div>
+                </div>
+            `}).join('');
+            if(window.lucide) lucide.createIcons();
+        }
+
+        // ================= DEDICATED PRODUCT PAGE (Requirement #2 & #6) =================
+        function openProductPage(id) {
+            const v = state.vehicles.find(x => x.id === id);
+            if (!v) return;
+            state.selectedCar = v;
+
+            document.getElementById('pCategory').textContent = v.category;
+            document.getElementById('pTitle').textContent = `${v.make} ${v.model} (${v.year})`;
+            document.getElementById('pZone').textContent = v.zone;
+            document.getElementById('pPrice').textContent = formatETB(v.dailyRate);
+            document.getElementById('pMainImg').src = v.image;
+
+            // Mekina-style specs
+            document.getElementById('pBrand').textContent = v.make;
+            document.getElementById('pModel').textContent = v.model;
+            document.getElementById('pYear').textContent = v.year;
+            document.getElementById('pFuel').textContent = v.fuel;
+            document.getElementById('pTrans').textContent = v.transmission;
+            document.getElementById('pBody').textContent = v.body;
+            document.getElementById('pColor').textContent = v.color;
+            document.getElementById('pCC').textContent = v.cc;
+            document.getElementById('pMil').textContent = v.mileage;
+            document.getElementById('pCond').textContent = v.condition;
+            document.getElementById('pSeats').textContent = v.seats;
+            document.getElementById('pDriver').textContent = v.driverMode;
+
+            document.getElementById('pDescription').textContent = v.description;
+            document.getElementById('pSupplierName').textContent = v.supplier.name;
+
+            // Share & Save
+            document.getElementById('pShareBtn').onclick = () => showToast(`Shared ${v.make} ${v.model} to Telegram`);
+            const pSave = document.getElementById('pSaveBtn');
+            pSave.onclick = (e) => toggleSave(e, v.id);
+            pSave.innerHTML = `<i data-lucide="heart" class="w-4 h-4 ${state.savedIds.has(v.id) ? 'fill-brand text-brand' : ''}"></i>`;
+
+            const today = new Date().toISOString().split('T')[0];
+            const end = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
+            document.getElementById('pStart').value = today;
+            document.getElementById('pEnd').value = end;
+            calcProductPageTotal();
+
+            document.querySelectorAll('.view-pane').forEach(el => el.classList.add('hidden'));
+            document.getElementById('productDetailView').classList.remove('hidden');
+            if(window.lucide) lucide.createIcons();
+            window.scrollTo(0,0);
+        }
+
+        function calcProductPageTotal() {
+            if(!state.selectedCar) return;
+            const s = new Date(document.getElementById('pStart').value);
+            const e = new Date(document.getElementById('pEnd').value);
+            const days = Math.max(1, Math.ceil((e - s) / 86400000));
+            document.getElementById('pCalculatedSum').textContent = formatETB(days * state.selectedCar.dailyRate);
+        }
+
+        function requestBookingFromPage() {
+            const s = new Date(document.getElementById('pStart').value);
+            const e = new Date(document.getElementById('pEnd').value);
+            const days = Math.max(1, Math.ceil((e - s) / 86400000));
+
+            document.getElementById('cTitle').textContent = `${state.selectedCar.make} ${state.selectedCar.model}`;
+            document.getElementById('cRate').textContent = formatETB(state.selectedCar.dailyRate) + '/day';
+            document.getElementById('cDays').textContent = days + ' Days';
+            document.getElementById('cTotal').textContent = formatETB(days * state.selectedCar.dailyRate);
+
+            document.getElementById('bookingSummaryModal').classList.remove('hidden');
+        }
+
+        function confirmBooking() {
+            closeModal('bookingSummaryModal');
+            document.getElementById('bookingTimelineModal').classList.remove('hidden');
+        }
+
+        // ================= OWNER =================
+        function goWizard(step) {
+            document.querySelectorAll('.wizard-pane').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`wizardStep${step}`).classList.remove('hidden');
+            document.getElementById('wizardStepNum').textContent = `Step ${step} of 4`;
+            for(let i=1; i<=4; i++) {
+                document.getElementById(`stepInd${i}`).className = `w-6 h-2 rounded-full transition-colors ${i <= step ? 'bg-brand' : 'bg-background'}`;
+            }
+        }
+
+        function testSanitizer(val) {
+            const m = document.getElementById('sanitizerMsg');
+            if (/(09|07|\+251)\d{8}/.test(val)) {
+                m.innerHTML = `<span class="text-brand font-bold">Shield activated. Contact hidden.</span>`;
+            } else { m.innerHTML = ""; }
+        }
+
+        function submitListing() {
+            const m = document.getElementById('wMake').value;
+            const mo = document.getElementById('wModel').value;
+            if(!m || !mo) return showToast('Fill required fields');
+
+            state.myGarage.push({ title: `${m} ${mo}`, rate: document.getElementById('wRate').value || 3500 });
+            goWizard(1);
+            showToast('Vehicle submitted for verification!');
+            renderGarage();
+        }
+
+        function renderGarage() {
+            const list = document.getElementById('myGarageList');
+            if(state.myGarage.length === 0) {
+                list.innerHTML = `<div class="col-span-full text-center bg-white border border-slate-100 rounded-3xl p-6 shadow-sm text-muted text-xs">Your vehicles will appear here after submission.</div>`;
+                return;
+            }
+            list.innerHTML = state.myGarage.map(g => `
+                <div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center border border-slate-100">
+                    <div>
+                        <h4 class="font-bold text-content text-sm">${g.title}</h4>
+                        <p class="text-xs text-muted font-medium mt-0.5">Rate: ${formatETB(g.rate)}</p>
+                    </div>
+                    <span class="bg-warning/10 text-warning px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border border-warning/20">Under Review</span>
+                </div>
+            `).join('');
+        }
+
+        // ================= ADMIN KANBAN =================
+        function renderKanban() {
+            const board = document.getElementById('kanbanBoard');
+            const stages = [{ id: 'NEW_REQUEST', label: 'New Request' }, { id: 'VEHICLE_MATCHED', label: 'Matched' }];
+            board.innerHTML = stages.map(s => {
+                const items = state.bookings.filter(b => b.stage === s.id);
+                return `
+                <div class="snap-align-start shrink-0 w-[280px] bg-slate-50/50 border border-slate-100 rounded-2xl p-3 flex flex-col h-[500px]">
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <span class="text-xs font-bold text-content">${s.label}</span>
+                        <span class="bg-white px-2 py-0.5 rounded text-[10px] font-bold text-muted">${items.length}</span>
+                    </div>
+                    <div class="flex-1 overflow-y-auto space-y-2.5 hide-scrollbar">
+                        ${items.map(b => `
+                            <div class="bg-white p-3 rounded-xl shadow-card border border-slate-100 text-xs cursor-pointer" onclick="openCommand('${b.id}')">
+                                <p class="font-bold text-content">${b.renter}</p>
+                                <p class="text-muted mt-0.5">${b.car}</p>
+                            </div>
+                        `).join('') || '<p class="text-[10px] text-muted text-center py-6">Empty</p>'}
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function openCommand(id) {
+            const b = state.bookings.find(x => x.id === id);
+            if(!b) return;
+            document.getElementById('cmdRef').textContent = b.ref;
+            document.getElementById('cmdRenter').textContent = b.renter;
+            document.getElementById('cmdOwner').textContent = b.lister;
+            document.getElementById('cmdGross').textContent = formatETB(b.val);
+            document.getElementById('commandModal').classList.remove('hidden');
+        }
+
+        // ================= UTILS =================
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function openSmartMatchModal() { document.getElementById('smartForm').classList.remove('hidden'); document.getElementById('smartSuccess').classList.add('hidden'); document.getElementById('smartMatchModal').classList.remove('hidden'); }
+        function submitSmartMatch() { document.getElementById('smartForm').classList.add('hidden'); document.getElementById('smartSuccess').classList.remove('hidden'); }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            t.classList.remove('hidden');
+            t.classList.add('slide-up');
+            setTimeout(() => { t.classList.add('hidden'); t.classList.remove('slide-up'); }, 3000);
+        }
+    </script>
+</body>
+</html>
