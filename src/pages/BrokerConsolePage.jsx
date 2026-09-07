@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  CarFront, 
-  CalendarCheck, 
-  Users, 
-  Settings, 
-  ArrowLeft, 
-  CheckCircle2, 
-  XCircle, 
-  Building2, 
-  DollarSign, 
-  Save, 
-  Clock, 
-  RefreshCw, 
-  Phone, 
+import {
+  LayoutDashboard,
+  CarFront,
+  CalendarCheck,
+  Users,
+  Settings,
+  ArrowLeft,
+  CheckCircle2,
+  XCircle,
+  Building2,
+  DollarSign,
+  Save,
+  Clock,
+  RefreshCw,
+  Phone,
   Send,
   PlusCircle,
   Star,
@@ -36,16 +36,16 @@ export const BrokerConsolePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
-  const { 
-    vehicles = [], 
-    pendingVehicles = [], 
-    bookings = [], 
-    usersList = [], 
+  const {
+    vehicles = [],
+    pendingVehicles = [],
+    bookings = [],
+    usersList = [],
     setVehicles,
-    approveVehicle, 
-    rejectVehicle, 
-    toggleUserVerification, 
-    openModal, 
+    approveVehicle,
+    rejectVehicle,
+    toggleUserVerification,
+    openModal,
     formatETB,
     refetchVehicles,
     refetchPendingVehicles,
@@ -212,7 +212,7 @@ export const BrokerConsolePage = () => {
 
   const handleDeleteVehicle = async (vehicleId) => {
     if (!window.confirm('Are you sure you want to remove this vehicle?')) return;
-    
+
     // Optimistic remove
     setVehicles(prev => prev.filter(v => String(v.id) !== String(vehicleId)));
     try {
@@ -249,7 +249,7 @@ export const BrokerConsolePage = () => {
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-80px)] -mx-4 sm:-mx-6 lg:-mx-8 -my-4 bg-background">
-      
+
       {/* Fixed Left Sidebar Navigation */}
       <aside className="w-full md:w-64 bg-white border-r border-border shrink-0 p-4 flex flex-col justify-between">
         <div className="space-y-6">
@@ -295,8 +295,8 @@ export const BrokerConsolePage = () => {
 
         {/* Exit to Marketplace Link */}
         <div className="pt-6 border-t border-border mt-6">
-          <button 
-            onClick={() => navigate('/')} 
+          <button
+            onClick={() => navigate('/')}
             className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-muted" />
@@ -307,7 +307,7 @@ export const BrokerConsolePage = () => {
 
       {/* Main Tab Content Area */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-        
+
         {/* ================= TAB 1: OVERVIEW & METRICS ================= */}
         {activeTab === 'overview' && (
           <div className="space-y-6 fade-in">
@@ -317,14 +317,14 @@ export const BrokerConsolePage = () => {
                 <p className="text-xs text-muted font-medium mt-0.5">Real-time KPIs and live Supabase system activity across Addis Ababa car rental fleet.</p>
               </div>
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setIsPostModalOpen(true)} 
+                <button
+                  onClick={() => setIsPostModalOpen(true)}
                   className="bg-[#8B0000] hover:bg-[#6b0000] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-xs flex items-center gap-1.5 transition-colors"
                 >
                   <PlusCircle className="w-3.5 h-3.5" /> Add Premium Post (+)
                 </button>
-                <button 
-                  onClick={() => { refetchVehicles(); refetchPendingVehicles(); refetchBookings(); refetchUsers(); }} 
+                <button
+                  onClick={() => { refetchVehicles(); refetchPendingVehicles(); refetchBookings(); refetchUsers(); }}
                   className="bg-white border border-border text-xs font-bold px-3 py-1.5 rounded-full shadow-xs flex items-center gap-1.5 hover:bg-slate-50 text-content"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
@@ -433,8 +433,8 @@ export const BrokerConsolePage = () => {
                 <span className="bg-amber-500 text-white font-black px-3 py-1 rounded-full text-xs animate-pulse">
                   {pendingCount} Pending
                 </span>
-                <button 
-                  onClick={refetchPendingVehicles} 
+                <button
+                  onClick={refetchPendingVehicles}
                   className="bg-white border border-border text-xs font-bold px-3 py-1 rounded-full shadow-xs flex items-center gap-1 hover:bg-slate-50 text-content"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Refresh
@@ -455,14 +455,14 @@ export const BrokerConsolePage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {pendingVehicles?.map(v => (
                   <div key={v?.id} className="bg-white rounded-3xl p-5 border border-border shadow-sm flex flex-col space-y-4 hover:shadow-md transition-all">
-                    
+
                     {/* Car Photo & Key Specs Header */}
                     <div className="flex gap-4 items-start">
                       <div className="w-24 h-24 rounded-2xl overflow-hidden bg-background shrink-0 border border-border">
-                        <img 
-                          src={v.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'} 
+                        <img
+                          src={v.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'}
                           alt={`${v.make} ${v.model}`}
-                          className="w-full h-full object-cover" 
+                          className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -536,14 +536,14 @@ export const BrokerConsolePage = () => {
 
                     {/* Interactive Broker Actions */}
                     <div className="flex gap-2 pt-3 border-t border-border mt-auto">
-                      <button 
-                        onClick={() => rejectVehicle(v.id)} 
+                      <button
+                        onClick={() => rejectVehicle(v.id)}
                         className="w-1/3 bg-background hover:bg-rose-50 text-rose-600 border border-border py-3 rounded-full text-xs font-bold transition-colors flex items-center justify-center gap-1"
                       >
                         <XCircle className="w-4 h-4" /> {t('reject')}
                       </button>
-                      <button 
-                        onClick={() => approveVehicle(v.id)} 
+                      <button
+                        onClick={() => approveVehicle(v.id)}
                         className="w-2/3 bg-success hover:bg-emerald-600 text-white py-3 rounded-full text-xs font-bold transition-colors shadow-soft flex items-center justify-center gap-1.5"
                       >
                         <CheckCircle2 className="w-4 h-4" /> {t('approveGoLive')}
@@ -568,14 +568,14 @@ export const BrokerConsolePage = () => {
                 <p className="text-xs text-muted font-medium mt-0.5">Manage live vehicles and promote to Premium placements.</p>
               </div>
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setIsPostModalOpen(true)} 
+                <button
+                  onClick={() => setIsPostModalOpen(true)}
                   className="bg-[#8B0000] hover:bg-[#6b0000] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs flex items-center gap-1 transition-colors"
                 >
                   <PlusCircle className="w-3.5 h-3.5" /> Add Premium Post (+)
                 </button>
-                <button 
-                  onClick={refetchVehicles} 
+                <button
+                  onClick={refetchVehicles}
                   className="bg-white border border-border text-xs font-bold px-3 py-1 rounded-full shadow-xs flex items-center gap-1 hover:bg-slate-50 text-content"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Refresh
@@ -657,16 +657,36 @@ export const BrokerConsolePage = () => {
                             <div className="flex items-center justify-center gap-2">
                               {v?.owner_phone ? (
                                 <>
-                                  <a 
-                                    href={`tel:${v.owner_phone}`} 
+                                  <button
+                                    onClick={async () => {
+                                      const nextVal = !v.is_premium;
+                                      const { error } = await supabase
+                                        .from('vehicles')
+                                        .update({ is_premium: nextVal })
+                                        .eq('id', v.id);
+                                      if (!error) {
+                                        showToast(nextVal ? 'Promoted to Premium' : 'Removed from Premium');
+                                        refetchVehicles();
+                                      }
+                                    }}
+                                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${v.is_premium
+                                      ? 'bg-amber-500 text-white shadow-sm'
+                                      : 'bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-amber-800'
+                                      }`}
+                                    title={v.is_premium ? 'Remove from Premium' : 'Make Premium'}
+                                  >
+                                    ★ {v.is_premium ? 'Premium' : 'Promote'}
+                                  </button>
+                                  <a
+                                    href={`tel:${v.owner_phone}`}
                                     className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors"
                                     title="Call Owner"
                                   >
                                     <Phone className="w-4 h-4" />
                                   </a>
-                                  <a 
-                                    href={`https://wa.me/${v.owner_phone?.replace('+', '')}`} 
-                                    target="_blank" 
+                                  <a
+                                    href={`https://wa.me/${v.owner_phone?.replace('+', '')}`}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-8 h-8 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors"
                                     title="WhatsApp"
@@ -684,7 +704,7 @@ export const BrokerConsolePage = () => {
                                   </button>
                                 </>
                               )}
-                              <button 
+                              <button
                                 onClick={() => handleDeleteVehicle(v?.id)}
                                 className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-orange-600 flex items-center justify-center transition-colors ml-1"
                                 title="Delete/Remove"
@@ -736,7 +756,7 @@ export const BrokerConsolePage = () => {
                   });
 
                   return (
-                    <div 
+                    <div
                       key={col.id}
                       className="snap-align-start shrink-0 w-[280px] bg-background border border-border rounded-2xl p-3 flex flex-col h-[550px]"
                     >
@@ -753,7 +773,7 @@ export const BrokerConsolePage = () => {
                       <div className="flex-1 overflow-y-auto space-y-2.5 hide-scrollbar">
                         {items?.length > 0 ? (
                           items.map(b => (
-                            <div 
+                            <div
                               key={b?.id}
                               onClick={() => openModal('command', b)}
                               className="bg-white p-3.5 rounded-2xl shadow-xs border border-border text-xs cursor-pointer hover:border-brand hover:shadow-md transition-all group"
@@ -818,34 +838,34 @@ export const BrokerConsolePage = () => {
                       {realUsers?.map(u => {
                         const displayName = u.full_name || u.name || 'Unknown User';
                         return (
-                        <tr key={u?.id} className="hover:bg-slate-50">
-                          <td className="py-3.5 px-4 font-extrabold text-content flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-xs">
-                              {displayName.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                            </div>
-                            {displayName}
-                          </td>
-                          <td className="py-3.5 px-4 font-mono font-semibold text-slate-600">
-                            {u.phone ? u.phone : <span className="text-gray-400 italic">No Number</span>}
-                          </td>
-                          <td className="py-3.5 px-4"><span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${u.role === 'Owner' || u.role === 'Broker' ? 'bg-purple-500/10 text-purple-700' : 'bg-blue-500/10 text-blue-700'}`}>{u.role || 'Member'}</span></td>
-                          <td className="py-3.5 px-4 font-bold text-content">{u.fleet_count || 0} vehicles</td>
-                          <td className="py-3.5 px-4">
-                            {u.is_verified ? (
-                              <span className="text-[10px] font-bold text-success flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Verified Member</span>
-                            ) : (
-                              <span className="text-[10px] font-bold text-muted">Unverified</span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={() => toggleUserVerification(u.id)}
-                              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${u.is_verified ? 'bg-background text-content hover:bg-slate-200' : 'bg-brand text-white hover:bg-brand-hover shadow-xs'}`}
-                            >
-                              {u.is_verified ? 'Unverify' : 'Verify User'}
-                            </button>
-                          </td>
-                        </tr>
+                          <tr key={u?.id} className="hover:bg-slate-50">
+                            <td className="py-3.5 px-4 font-extrabold text-content flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-xs">
+                                {displayName.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                              </div>
+                              {displayName}
+                            </td>
+                            <td className="py-3.5 px-4 font-mono font-semibold text-slate-600">
+                              {u.phone ? u.phone : <span className="text-gray-400 italic">No Number</span>}
+                            </td>
+                            <td className="py-3.5 px-4"><span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${u.role === 'Owner' || u.role === 'Broker' ? 'bg-purple-500/10 text-purple-700' : 'bg-blue-500/10 text-blue-700'}`}>{u.role || 'Member'}</span></td>
+                            <td className="py-3.5 px-4 font-bold text-content">{u.fleet_count || 0} vehicles</td>
+                            <td className="py-3.5 px-4">
+                              {u.is_verified ? (
+                                <span className="text-[10px] font-bold text-success flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Verified Member</span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-muted">Unverified</span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <button
+                                onClick={() => toggleUserVerification(u.id)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${u.is_verified ? 'bg-background text-content hover:bg-slate-200' : 'bg-brand text-white hover:bg-brand-hover shadow-xs'}`}
+                              >
+                                {u.is_verified ? 'Unverify' : 'Verify User'}
+                              </button>
+                            </td>
+                          </tr>
                         );
                       })}
                     </tbody>
@@ -868,7 +888,7 @@ export const BrokerConsolePage = () => {
               <div>
                 <label className="text-xs font-bold text-content block mb-1">Broker Commission Percentage (%)</label>
                 <div className="relative">
-                  <input 
+                  <input
                     type="number"
                     value={settingsForm.commissionPercentage}
                     onChange={(e) => setSettingsForm(prev => ({ ...prev, commissionPercentage: e.target.value }))}
@@ -882,7 +902,7 @@ export const BrokerConsolePage = () => {
                 <label className="text-xs font-bold text-content block mb-1">Master Broker Phone Number</label>
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-                  <input 
+                  <input
                     type="text"
                     value={settingsForm.brokerPhone}
                     onChange={(e) => setSettingsForm(prev => ({ ...prev, brokerPhone: e.target.value }))}
@@ -895,7 +915,7 @@ export const BrokerConsolePage = () => {
                 <label className="text-xs font-bold text-content block mb-1">Telegram Contact Handle</label>
                 <div className="relative">
                   <Send className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-telegram" />
-                  <input 
+                  <input
                     type="text"
                     value={settingsForm.telegramHandle}
                     onChange={(e) => setSettingsForm(prev => ({ ...prev, telegramHandle: e.target.value }))}
@@ -908,8 +928,8 @@ export const BrokerConsolePage = () => {
                 <label className="text-xs font-bold text-content block">Listing Moderation Mode</label>
                 <div className="grid grid-cols-2 gap-3">
                   <label className={`p-4 rounded-2xl border text-xs font-bold cursor-pointer transition-all ${settingsForm.moderationMode === 'manual' ? 'border-brand bg-brand/5 text-brand' : 'border-border bg-white text-content'}`}>
-                    <input 
-                      type="radio" 
+                    <input
+                      type="radio"
                       name="moderation"
                       value="manual"
                       checked={settingsForm.moderationMode === 'manual'}
@@ -921,8 +941,8 @@ export const BrokerConsolePage = () => {
                   </label>
 
                   <label className={`p-4 rounded-2xl border text-xs font-bold cursor-pointer transition-all ${settingsForm.moderationMode === 'auto' ? 'border-brand bg-brand/5 text-brand' : 'border-border bg-white text-content'}`}>
-                    <input 
-                      type="radio" 
+                    <input
+                      type="radio"
                       name="moderation"
                       value="auto"
                       checked={settingsForm.moderationMode === 'auto'}
@@ -936,8 +956,8 @@ export const BrokerConsolePage = () => {
               </div>
 
               <div className="pt-3">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="w-full bg-brand hover:bg-brand-hover text-white py-3.5 rounded-full font-bold text-xs shadow-floating transition-colors flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" /> {t('saveSettings')}
@@ -948,7 +968,7 @@ export const BrokerConsolePage = () => {
         )}
       </main>
 
-      <AdminPostModal 
+      <AdminPostModal
         isOpen={isPostModalOpen}
         onClose={() => setIsPostModalOpen(false)}
         onSuccess={() => {
