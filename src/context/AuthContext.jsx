@@ -46,13 +46,27 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signUp = async (email, password, fullName) => {
-    return await supabase.auth.signUp({
+    const res = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName }
       }
     });
+
+    if (res?.data?.user?.id) {
+      try {
+        await supabase.from('profiles').upsert({
+          id: res.data.user.id,
+          full_name: fullName || email?.split('@')[0] || 'Member',
+          role: 'Member'
+        }, { onConflict: 'id' });
+      } catch (err) {
+        console.warn('Could not auto-create profile row on signup:', err);
+      }
+    }
+
+    return res;
   };
 
   const signOut = async () => {

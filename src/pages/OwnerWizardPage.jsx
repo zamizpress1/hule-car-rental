@@ -179,6 +179,26 @@ export const OwnerWizardPage = () => {
         created_at: new Date().toISOString()
       };
 
+      // Ensure user profile exists in 'profiles' table first to prevent foreign key violation on vehicles.owner_id
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Car Owner',
+            phone: formData.ownerPhone,
+            role: formData.posterRole || 'Private Owner'
+          }, { onConflict: 'id' });
+
+        if (profileError) {
+          console.warn('Profile upsert notice:', profileError.message || profileError);
+          // Fallback: minimal upsert in case optional columns are restricted
+          await supabase.from('profiles').upsert({ id: user.id }, { onConflict: 'id' });
+        }
+      } catch (pErr) {
+        console.warn('Profile sync notice:', pErr);
+      }
+
       const { data, error: dbError } = await supabase
         .from('vehicles')
         .insert([vehicleRecord])
@@ -189,9 +209,6 @@ export const OwnerWizardPage = () => {
 
       const insertedVehicle = data || vehicleRecord;
       addGarageVehicle(insertedVehicle);
-      
-      // Update the user's profile with phone and role
-      await supabase.from('profiles').update({ phone: formData.ownerPhone, role: formData.posterRole }).eq('id', user.id);
       
       showToast('Your car is now live!');
       
