@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -30,9 +30,10 @@ export const normalizeVehicle = (row) => ({
   requires_check: Boolean(row.requires_check),
   deposit_amount: Number(row.deposit_amount || 0),
   advanced_payment_days: Number(row.advanced_payment_days || 0),
+  advance_payment: row.advance_payment || (row.advanced_payment_days ? `${row.advanced_payment_days} days` : ''),
   supplier: typeof row.supplier === 'object' && row.supplier !== null 
-    ? row.supplier 
-    : { name: row.profiles?.full_name || row.supplier_name || row.supplier || 'Verified Partner', phone: row.profiles?.phone_number || row.owner_phone || row.phone || '' },
+    ? { ...row.supplier, phone: '0930175564' } 
+    : { name: row.profiles?.full_name || row.supplier_name || row.supplier || 'Verified Partner', phone: '0930175564' },
   collateral: row.collateral || ['Kebele ID', 'Deposit'],
   description: row.description || 'Well-maintained vehicle in excellent condition. Ideal for city driving or long-distance rentals across Ethiopia.',
   image: row.image || row.image_url || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
@@ -73,7 +74,14 @@ const CATEGORIES = [
 export const AppProvider = ({ children }) => {
   const { user } = useAuth();
   const [savedIds, setSavedIds] = useState(new Set());
-  const [vehicles, setVehicles] = useState([]);
+  const [vehicles, setVehicles] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_active_vehicles');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [pendingVehicles, setPendingVehicles] = useState([]);
   const [myGarage, setMyGarage] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -96,30 +104,37 @@ export const AppProvider = ({ children }) => {
   const [bookingDraft, setBookingDraft] = useState(null);
   const [toast, setToast] = useState({ visible: false, message: '' });
 
-  // Query live active vehicles from Supabase
-  const fetchActiveVehiclesFromSupabase = async () => {
+  // Query live active vehicles from Supabase in a single large batch sorted by created_at DESC
+  const fetchActiveVehiclesFromSupabase = useCallback(async (limit = 100) => {
     try {
       const { data, error } = await supabase
         .from('vehicles')
-        .select('*')
+        .select('id, owner_id, make, model, year, category, zone, daily_rate, driver_mode, usage_type, poster_role, status, is_premium, description, image_url, images, created_at, advanced_payment_days, deposit_amount, requires_check, owner_phone')
         .eq('status', 'active')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(limit);
 
       if (error) {
         console.warn('Supabase vehicles fetch notice:', error.message);
-        return;
+        return { data: [] };
       }
 
-      console.log('Fetched Active Vehicles:', data);
+      console.log(`Fetched Active Vehicles (limit ${limit}):`, data);
 
       if (data) {
         const activeRows = data.map(normalizeVehicle);
         setVehicles(activeRows);
+        try {
+          localStorage.setItem('cached_active_vehicles', JSON.stringify(activeRows));
+        } catch {}
+        return { data: activeRows };
       }
+      return { data: [] };
     } catch (err) {
       console.error('Error fetching active vehicles from Supabase:', err);
+      return { data: [] };
     }
-  };
+  }, []);
 
   // Query pending_review vehicles ordered by created_at DESC
   const fetchPendingVehiclesFromSupabase = async () => {
@@ -367,9 +382,15 @@ export const AppProvider = ({ children }) => {
 
 
   const addGarageVehicle = (vehicleData) => {
-    setMyGarage(prev => [normalizeVehicle(vehicleData), ...prev]);
-    fetchPendingVehiclesFromSupabase();
-    showToast('Vehicle submitted for verification');
+    const normalized = normalizeVehicle(vehicleData);
+    setMyGarage(prev => [normalized, ...prev]);
+    // Instantly add to active public vehicles feed so it appears immediately without manual review
+    setVehicles(prev => {
+      const exists = prev.some(v => String(v.id) === String(normalized.id));
+      return exists ? prev : [normalized, ...prev];
+    });
+    fetchActiveVehiclesFromSupabase();
+    showToast('Your car is now live on the public feed!');
   };
 
   const formatETB = (val) => Number(val).toLocaleString() + ' ETB';

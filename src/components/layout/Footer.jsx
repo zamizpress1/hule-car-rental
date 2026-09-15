@@ -29,7 +29,7 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-slate-800">
           
           {/* Brand Column */}
-          <div className="md:col-span-5 space-y-4">
+          <div className="md:col-span-5 space-y-3.5">
             <Link to="/" onClick={handleExploreClick} className="inline-flex items-center gap-3">
               <div className="w-10 h-10 bg-brand rounded-xl shadow-lg flex items-center justify-center text-white">
                 <CarFront className="w-5 h-5" />
@@ -38,14 +38,32 @@ export const Footer = () => {
                 Hule የመኪና ኪራይ <ShieldCheck className="w-4 h-4 text-brand" />
               </span>
             </Link>
-            <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-              The premier managed car rental network in Addis Ababa. Connecting verified vehicle listers with trusted renters through our dedicated local broker network.
-            </p>
-            <div className="flex items-center gap-2 pt-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Broker Network Active
+
+            {/* Trust Badge */}
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-950/90 text-emerald-400 border border-emerald-700/60 max-w-full break-words shadow-sm">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>መረጃዎ በድህረ ገፁ ባለቤቶች የተጠበቀ ነው 100% SAFE</span>
               </span>
+            </div>
+
+            {/* Official Amharic Business Bio */}
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-sm font-medium break-words">
+              ማንኛውም አይነት መኪና ለመከራየት ወይም ለማከራየት ከፈለጉ ድህረ ገፃችንን ይጠቀሙ ለተጨማሪ መረጃ በዚ ስልክ ይደውሉ 🙏👇
+            </p>
+
+            {/* Prominent Orange Phone Number */}
+            <div>
+              <a
+                href="tel:+251930175564"
+                className="inline-flex items-center gap-2 text-lg sm:text-xl font-extrabold text-brand hover:text-brand-hover transition-colors tracking-wide"
+              >
+                <Phone className="w-5 h-5 text-brand shrink-0" />
+                +251930175564
+              </a>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
                 Addis Ababa, ET
               </span>
@@ -65,12 +83,16 @@ export const Footer = () => {
                 </button>
               </li>
               <li>
-                <Link 
-                  to="/list-car" 
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.location.href = '/post-car';
+                  }} 
                   className="hover:text-white transition-colors flex items-center gap-1.5 text-slate-300"
                 >
                   List Your Car
-                </Link>
+                </button>
               </li>
               <li>
                 <button 

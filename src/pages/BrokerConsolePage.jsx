@@ -642,7 +642,13 @@ export const BrokerConsolePage = () => {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            {v?.owner_phone ? <a href={"tel:" + v?.owner_phone} className="text-blue-600 font-bold hover:underline">{v?.owner_phone}</a> : <span className="text-gray-400 italic">No Number</span>}
+                            {v?.owner_phone ? (
+                              <a href={`tel:${v.owner_phone}`} className="text-blue-600 font-bold hover:underline">
+                                {v.owner_phone}
+                              </a>
+                            ) : (
+                              <span className="text-slate-400 italic">No Number</span>
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             <span className="text-[11px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md border border-slate-200 shadow-xs">
@@ -655,28 +661,28 @@ export const BrokerConsolePage = () => {
                           </td>
                           <td className={`py-3 px-4 sticky right-0 border-l border-border z-10 shadow-[-4px_0_10px_-5px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-slate-50 ${rowBg}`}>
                             <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={async () => {
+                                  const nextVal = !v.is_premium;
+                                  const { error } = await supabase
+                                    .from('vehicles')
+                                    .update({ is_premium: nextVal })
+                                    .eq('id', v.id);
+                                  if (!error) {
+                                    showToast(nextVal ? 'Promoted to Premium' : 'Removed from Premium');
+                                    refetchVehicles();
+                                  }
+                                }}
+                                className={`px-2 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${v.is_premium
+                                  ? 'bg-amber-500 text-white shadow-sm'
+                                  : 'bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-amber-800'
+                                  }`}
+                                title={v.is_premium ? 'Remove from Premium' : 'Make Premium'}
+                              >
+                                ★ {v.is_premium ? 'Premium' : 'Promote'}
+                              </button>
                               {v?.owner_phone ? (
                                 <>
-                                  <button
-                                    onClick={async () => {
-                                      const nextVal = !v.is_premium;
-                                      const { error } = await supabase
-                                        .from('vehicles')
-                                        .update({ is_premium: nextVal })
-                                        .eq('id', v.id);
-                                      if (!error) {
-                                        showToast(nextVal ? 'Promoted to Premium' : 'Removed from Premium');
-                                        refetchVehicles();
-                                      }
-                                    }}
-                                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${v.is_premium
-                                      ? 'bg-amber-500 text-white shadow-sm'
-                                      : 'bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-amber-800'
-                                      }`}
-                                    title={v.is_premium ? 'Remove from Premium' : 'Make Premium'}
-                                  >
-                                    ★ {v.is_premium ? 'Premium' : 'Promote'}
-                                  </button>
                                   <a
                                     href={`tel:${v.owner_phone}`}
                                     className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors"

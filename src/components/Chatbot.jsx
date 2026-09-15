@@ -46,7 +46,7 @@ export const Chatbot = () => {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end">
+    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
       {isOpen && (
         <div className="w-80 sm:w-96 bg-white shadow-2xl rounded-2xl mb-4 overflow-hidden fade-in border border-slate-100 flex flex-col" style={{ maxHeight: '600px', height: '80vh' }}>
           {/* Header */}

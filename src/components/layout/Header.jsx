@@ -46,13 +46,13 @@ export const Header = () => {
     }
   };
 
-  const handleListCarClick = () => {
-    setMobileMenuOpen(false);
-    if (!user) {
-      openModal('auth');
-    } else {
-      navigate('/list-car');
+  const handleListCarClick = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+    setMobileMenuOpen(false);
+    window.location.href = '/post-car';
   };
 
   const getButtonLabel = () => {

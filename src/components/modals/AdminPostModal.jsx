@@ -20,7 +20,8 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
     requirements: {
       kebeleId: true,
       driversLicense: true,
-      check: false
+      check: false,
+      tradeLicense: false
     },
     depositAmount: '',
     advancedPaymentDays: 0,
@@ -128,7 +129,7 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
     }
 
     const vehicleRecord = {
-      owner_id: user?.id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      owner_id: user?.id || null,
       make: formData.make,
       model: formData.model,
       year: parseInt(formData.year) || 2023,
@@ -142,9 +143,18 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
       description: formData.description || '',
       image_url: uploadedUrls[0],
       images: uploadedUrls,
+      requires_kebele_id: Boolean(formData.requirements.kebeleId),
+      requires_drivers_license: Boolean(formData.requirements.driversLicense),
       requires_check: Boolean(formData.requirements.check),
+      requires_trade_license: Boolean(formData.requirements.tradeLicense),
+      collateral: [
+        ...(formData.requirements?.kebeleId ? ['Kebele ID'] : []),
+        ...(formData.requirements?.driversLicense ? ["Driver's License"] : []),
+        ...(formData.requirements?.check ? ['Check'] : []),
+        ...(formData.requirements?.tradeLicense ? ['ንግድ ፍቃድ'] : [])
+      ],
       deposit_amount: parseFloat(formData.depositAmount) || 0,
-      advanced_payment_days: parseInt(formData.advancedPaymentDays) || 0,
+      advanced_payment_days: parseInt(formData.advancedPaymentDays, 10) || 0,
       status: 'active',
       is_premium: true,
       urgency_tag: formData.urgencyTag === 'None' ? null : formData.urgencyTag
@@ -319,7 +329,7 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
 
           <label className="text-[10px] font-bold text-content ml-2 block">Required Collateral Documents</label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <label className="bg-background p-3 rounded-xl flex items-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors">
               <input 
                 type="checkbox" 
@@ -346,6 +356,15 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
                 className="accent-brand w-4 h-4" 
               />
               <span className="font-semibold text-content">Blank Check</span>
+            </label>
+            <label className="bg-background p-3 rounded-xl flex items-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors">
+              <input 
+                type="checkbox" 
+                checked={formData.requirements.tradeLicense} 
+                onChange={(e) => handleRequirementChange('tradeLicense', e.target.checked)}
+                className="accent-brand w-4 h-4" 
+              />
+              <span className="font-semibold text-content">ንግድ ፍቃድ</span>
             </label>
           </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Search, SlidersHorizontal, X, ShieldCheck, Heart, MapPin, Car, Gauge, Mountain, Gem, Bus, UserCheck, ChevronRight, Phone, Send } from 'lucide-react';
+import { Sparkles, Search, SlidersHorizontal, X, ShieldCheck, Heart, MapPin, Car, Gauge, Mountain, Gem, Bus, UserCheck, ChevronRight, Phone, Send, Loader2, Percent } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useSettings } from '../context/SettingsContext';
@@ -39,13 +39,15 @@ export const MarketplacePage = () => {
   const { language, toggleLanguage, t } = useLanguage();
   const { settings } = useSettings();
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(vehicles.length === 0);
 
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
       try {
-        await refetchVehicles();
+        if (vehicles.length === 0) {
+          await refetchVehicles(100);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -130,12 +132,14 @@ export const MarketplacePage = () => {
     return searchMatch && zoneMatch && categoryMatch && driverMatch && priceMatch;
   });
 
-  const premiumVehicles = filteredVehicles.filter(v => v.is_premium === true);
+  const premiumVehicles = filteredVehicles
+    .filter(v => v.is_premium === true)
+    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 
   const filteredFleet = filteredVehicles
     .filter(v => v.is_premium !== true)
     .sort((a, b) => {
-      if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() < new Date(a.created_at || 0).getTime() ? 1 : -1;
+      if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       if (sortBy === 'price_asc') return Number(a.dailyRate) - Number(b.dailyRate);
       if (sortBy === 'price_desc') return Number(b.dailyRate) - Number(a.dailyRate);
       return 0;
@@ -144,8 +148,25 @@ export const MarketplacePage = () => {
   return (
     <section className="space-y-4 md:space-y-6 fade-in pb-8">
 
+      {/* GLOBAL 10% COMMISSION NOTICE BANNER */}
+      <div className="bg-orange-50 border border-orange-200 text-orange-950 px-3.5 py-2.5 rounded-xl shadow-xs flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold">
+        <div className="flex items-center gap-2">
+          <div className="p-1 bg-orange-600 text-white rounded-md flex-shrink-0">
+            <Percent className="w-3.5 h-3.5 stroke-[2.5]" />
+          </div>
+          <span>
+            {language === 'am'
+              ? 'በሁሉም መኪና ኪራዮች ላይ 10% የብሮከር ኮሚሽን ይተገበራል::'
+              : '10% Brokerage Commission Applies on all rentals.'}
+          </span>
+        </div>
+        <span className="hidden sm:inline-block text-[11px] font-bold text-orange-700 bg-orange-100/90 px-2.5 py-0.5 rounded-full border border-orange-200/80">
+          Standard Brokerage Fee
+        </span>
+      </div>
+
       {/* PREMIUM POSTS SECTION */}
-      <div className="pt-4">
+      <div className="pt-2">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold tracking-tight text-content">
             {t.premiumPosts || 'Premium posts'}
@@ -159,7 +180,12 @@ export const MarketplacePage = () => {
         <div className="flex overflow-x-auto gap-4 snap-x hide-scrollbar pb-2">
           {premiumVehicles.map(v => {
             const isSaved = savedIds.has(v.id);
-            const advanceValue = v.advanced_payment_days || v.advance_days;
+            let rawAdv = Number(v.advanced_payment_days || v.advance_days || 0);
+            if (!rawAdv && v.advance_payment) {
+              const match = String(v.advance_payment).match(/\d+/);
+              if (match) rawAdv = parseInt(match[0], 10);
+            }
+            const calculatedMonths = rawAdv > 0 ? (rawAdv >= 30 ? Math.round(rawAdv / 30) : rawAdv) : 0;
 
             return (
               <div
@@ -171,6 +197,8 @@ export const MarketplacePage = () => {
                   <img
                     src={v.image || v.image_url || (v.images && v.images[0]) || 'https://placehold.co/600x400?text=No+Image'}
                     alt={`${v.make} ${v.model}`}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
 
@@ -190,9 +218,9 @@ export const MarketplacePage = () => {
                     <div className="bg-black/80 text-white text-xs md:text-sm font-bold px-2 py-1 rounded-tr-md">
                       {t.etb || 'ETB'} {v.dailyRate || v.daily_rate} / {t.day || 'day'}
                     </div>
-                    {advanceValue && (
+                    {calculatedMonths > 0 && (
                       <div className="bg-amber-600 text-white text-[10px] md:text-xs font-semibold px-2 py-1 rounded-tr-md ml-0.5 shadow-sm">
-                        {advanceValue} {language === 'am' ? 'ቀን ቅድመ ክፍያ' : 'days advance'}
+                        {calculatedMonths} ወር ቅድመ ክፍያ
                       </div>
                     )}
                   </div>
@@ -204,6 +232,11 @@ export const MarketplacePage = () => {
                   >
                     <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-brand text-brand' : ''}`} />
                   </button>
+
+                  {/* 10% Commission Badge */}
+                  <div className="absolute top-2 left-9 sm:left-10 bg-orange-600 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-sm z-10">
+                    10% Commission
+                  </div>
                 </div>
 
                 <div className="p-2 flex flex-col gap-1 flex-1">
@@ -235,37 +268,37 @@ export const MarketplacePage = () => {
       </div>
 
       {/* WEB HERO SECTION */}
-      <div className="bg-white py-6">
-        <div className="max-w-4xl mx-auto text-center px-4 md:px-8 space-y-4">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-content tracking-tight leading-[1.1] font-display">
+      <div className="bg-white py-2 md:py-4">
+        <div className="max-w-3xl mx-auto text-center px-3 md:px-6 space-y-2">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-content tracking-tight leading-snug font-display">
             Find the right rental car in Addis Ababa
           </h1>
-          <p className="text-xs sm:text-sm md:text-base text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xl mx-auto leading-normal">
             Search across all verified fleet by keyword, location, and type
           </p>
 
           {/* INTEGRATED HERO SEARCH & FILTER CONTAINER */}
-          <div className="pt-4 text-left">
-            <div className="bg-white rounded-lg shadow-md border border-slate-200 p-3">
-              <div className="flex flex-col gap-3">
+          <div className="pt-1.5 text-left">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200/90 p-3 md:p-6">
+              <div className="flex flex-col gap-2 sm:gap-2.5">
 
                 {/* Row 1: Search & Zone */}
-                <div className="flex flex-col md:flex-row gap-3 w-full">
+                <div className="flex flex-col md:flex-row gap-2 sm:gap-2.5 w-full">
                   <div className="w-full md:flex-grow relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                     <input
                       type="text"
                       value={filters.search}
                       onChange={handleSearchChange}
                       placeholder={t.searchPlaceholder || "Search brand, model, or keyword"}
-                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-md pl-10 pr-3 py-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
+                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-lg pl-8 pr-3 py-1.5 text-sm font-medium text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
                     />
                   </div>
-                  <div className="w-full md:w-48">
+                  <div className="w-full md:w-44">
                     <select
                       value={filters.zone}
                       onChange={handleZoneChange}
-                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-md px-3 py-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition-all cursor-pointer"
+                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-lg px-3 py-1.5 text-sm font-medium text-slate-900 focus:outline-none transition-all cursor-pointer"
                     >
                       <option value="all">All Locations</option>
                       <option value="Bole">Bole</option>
@@ -276,41 +309,45 @@ export const MarketplacePage = () => {
                   </div>
                 </div>
 
-                {/* Row 2: Price Filters & Sort */}
-                <div className="flex flex-col md:flex-row gap-3 w-full">
-                  <div className="w-full md:flex-1">
-                    <input
-                      type="number"
-                      value={minPrice}
-                      onChange={(e) => setMinPrice(e.target.value)}
-                      placeholder="Min Price (ETB)"
-                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-md px-3 py-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
-                    />
+                {/* Row 2: Price Filters (Side-by-Side on Mobile), Sort & Search */}
+                <div className="flex flex-col md:flex-row gap-2 sm:gap-2.5 w-full">
+                  {/* Side-by-Side Min and Max Price on mobile */}
+                  <div className="grid grid-cols-2 gap-2 w-full md:flex md:flex-1 md:gap-2.5">
+                    <div className="w-full">
+                      <input
+                        type="number"
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                        placeholder="Min Price (ETB)"
+                        className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-lg px-3 py-1.5 text-sm font-medium text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
+                      />
+                    </div>
+                    <div className="w-full">
+                      <input
+                        type="number"
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                        placeholder="Max Price (ETB)"
+                        className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-lg px-3 py-1.5 text-sm font-medium text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
+                      />
+                    </div>
                   </div>
-                  <div className="w-full md:flex-1">
-                    <input
-                      type="number"
-                      value={maxPrice}
-                      onChange={(e) => setMaxPrice(e.target.value)}
-                      placeholder="Max Price (ETB)"
-                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-md px-3 py-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
-                    />
-                  </div>
+
                   <div className="w-full md:flex-1">
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-md px-3 py-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition-all cursor-pointer"
+                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-brand rounded-lg px-3 py-1.5 text-sm font-medium text-slate-900 focus:outline-none transition-all cursor-pointer"
                     >
                       <option value="newest">Newest Added</option>
                       <option value="price_asc">Price: Low to High</option>
                       <option value="price_desc">Price: High to Low</option>
                     </select>
                   </div>
-                  <div className="w-full md:w-32">
+                  <div className="w-full md:w-28">
                     <button
                       onClick={() => { }}
-                      className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-md text-sm font-bold transition-all shadow-sm"
+                      className="w-full bg-slate-900 hover:bg-slate-800 text-white py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm"
                     >
                       Search
                     </button>
@@ -321,10 +358,14 @@ export const MarketplacePage = () => {
             </div>
 
             {/* Main Post CTA */}
-            <div className="mt-6 flex justify-center">
+            <div className="mt-2.5 flex justify-center">
               <button
-                onClick={() => navigate('/list-car')}
-                className="bg-brand hover:bg-brand-hover text-white px-8 py-3.5 rounded-full text-sm font-extrabold shadow-lg hover:shadow-xl transition-all w-full md:w-auto"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.href = '/post-car';
+                }}
+                className="bg-brand hover:bg-brand-hover text-white px-6 py-2 rounded-full text-xs font-bold shadow-md hover:shadow-lg transition-all w-full md:w-auto"
               >
                 {t.postCar || 'የሚከራይ መኪና እዚህ ያስገቡ | List your rental car here'}
               </button>
@@ -346,13 +387,15 @@ export const MarketplacePage = () => {
 
         {loading && (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-6 px-2 md:px-0">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm animate-pulse">
-                <div className="w-full h-32 md:h-48 bg-slate-200" />
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs animate-pulse">
+                <div className="w-full h-32 md:h-48 bg-slate-200/80 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer" />
+                </div>
                 <div className="p-2.5 space-y-2">
-                  <div className="h-3.5 bg-slate-200 rounded w-3/4" />
-                  <div className="h-2.5 bg-slate-100 rounded w-1/2" />
-                  <div className="flex justify-between items-center pt-1">
+                  <div className="h-4 bg-slate-200 rounded w-3/4" />
+                  <div className="h-3 bg-slate-100 rounded w-1/2" />
+                  <div className="flex justify-between items-center pt-2">
                     <div className="h-4 bg-slate-200 rounded w-1/3" />
                     <div className="h-3 bg-slate-200 rounded w-1/4" />
                   </div>
@@ -409,74 +452,88 @@ export const MarketplacePage = () => {
         )}
 
         {!loading && filteredFleet.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-6 px-2 md:px-0 animate-fadeIn transition-opacity duration-300 opacity-100">
-            {filteredFleet.map(v => {
-              const isSaved = savedIds.has(v.id);
-              const advanceValue = v.advanced_payment_days || v.advance_days;
-              return (
-                <div
-                  key={v.id}
-                  onClick={() => navigate(`/vehicle/${v.id}`)}
-                  className="bg-white rounded-lg border border-gray-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden"
-                >
-                  <div className="relative w-full h-32 md:h-48 bg-slate-100 overflow-hidden">
-                    <img
-                      src={v.image || v.image_url || (v.images && v.images[0]) || 'https://placehold.co/600x400?text=No+Image'}
-                      alt={`${v.make} ${v.model}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-6 px-2 md:px-0 animate-fadeIn transition-opacity duration-300 opacity-100">
+              {filteredFleet.map(v => {
+                const isSaved = savedIds.has(v.id);
+                let rawAdv = Number(v.advanced_payment_days || v.advance_days || 0);
+                if (!rawAdv && v.advance_payment) {
+                  const match = String(v.advance_payment).match(/\d+/);
+                  if (match) rawAdv = parseInt(match[0], 10);
+                }
+                const calculatedMonths = rawAdv > 0 ? (rawAdv >= 30 ? Math.round(rawAdv / 30) : rawAdv) : 0;
+                return (
+                  <div
+                    key={v.id}
+                    onClick={() => navigate(`/vehicle/${v.id}`)}
+                    className="bg-white rounded-lg border border-gray-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden"
+                  >
+                    <div className="relative w-full h-32 md:h-48 bg-slate-100 overflow-hidden">
+                      <img
+                        src={v.image || v.image_url || (v.images && v.images[0]) || 'https://placehold.co/600x400?text=No+Image'}
+                        alt={`${v.make} ${v.model}`}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
 
-                    {v.urgency_tag && (
-                      <div className="bg-red-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-md absolute top-0 left-0 z-10">
-                        {v.urgency_tag}
-                      </div>
-                    )}
-
-                    {/* Verified Badge */}
-                    <div className="absolute top-2 right-0 bg-cyan-500 text-white px-2 py-0.5 rounded-l-md text-[10px] font-bold shadow-sm z-10">
-                      Verified
-                    </div>
-
-                    {/* Price & Advance Overlay */}
-                    <div className="absolute bottom-0 left-0 flex items-center z-10">
-                      <div className="bg-black/80 text-white text-xs md:text-sm font-bold px-2 py-1 rounded-tr-md">
-                        {t.etb || 'ETB'} {v.dailyRate || v.daily_rate} / {t.day || 'day'}
-                      </div>
-                      {advanceValue && (
-                        <div className="bg-amber-600 text-white text-[10px] md:text-xs font-semibold px-2 py-1 rounded-tr-md ml-0.5 shadow-sm">
-                          {advanceValue} {language === 'am' ? 'ቀን ቅድመ ክፍያ' : 'days advance'}
+                      {v.urgency_tag && (
+                        <div className="bg-red-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-md absolute top-0 left-0 z-10">
+                          {v.urgency_tag}
                         </div>
                       )}
+
+                      {/* Verified Badge */}
+                      <div className="absolute top-2 right-0 bg-cyan-500 text-white px-2 py-0.5 rounded-l-md text-[10px] font-bold shadow-sm z-10">
+                        Verified
+                      </div>
+
+                      {/* Price & Advance Overlay */}
+                      <div className="absolute bottom-0 left-0 flex items-center z-10">
+                        <div className="bg-black/80 text-white text-xs md:text-sm font-bold px-2 py-1 rounded-tr-md">
+                          {t.etb || 'ETB'} {v.dailyRate || v.daily_rate} / {t.day || 'day'}
+                        </div>
+                        {calculatedMonths > 0 && (
+                          <div className="bg-amber-600 text-white text-[10px] md:text-xs font-semibold px-2 py-1 rounded-tr-md ml-0.5 shadow-sm">
+                            {calculatedMonths} ወር ቅድመ ክፍያ
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={(e) => toggleSave(v.id, e)}
+                        className="absolute top-2 left-2 bg-white/90 backdrop-blur w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-slate-400 shadow-sm hover:text-brand transition-colors z-10"
+                        title="Save vehicle"
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-brand text-brand' : ''}`} />
+                      </button>
+
+                      {/* 10% Commission Badge */}
+                      <div className="absolute top-2 left-9 sm:left-10 bg-orange-600 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-sm z-10">
+                        10% Commission
+                      </div>
                     </div>
 
-                    <button
-                      onClick={(e) => toggleSave(v.id, e)}
-                      className="absolute top-2 left-2 bg-white/90 backdrop-blur w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-slate-400 shadow-sm hover:text-brand transition-colors z-10"
-                      title="Save vehicle"
-                    >
-                      <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-brand text-brand' : ''}`} />
-                    </button>
-                  </div>
+                    <div className="p-2 flex flex-col gap-1 flex-1">
+                      <h3 className="text-xs md:text-sm font-bold truncate text-gray-800">
+                        {v.make} {v.model}
+                      </h3>
 
-                  <div className="p-2 flex flex-col gap-1 flex-1">
-                    <h3 className="text-xs md:text-sm font-bold truncate text-gray-800">
-                      {v.make} {v.model}
-                    </h3>
+                      <p className="text-[10px] text-gray-500 truncate">{v.year} • {v.usage_type || 'Personal Use'} • {formatTimeAgo(v.created_at)}</p>
 
-                    <p className="text-[10px] text-gray-500 truncate">{v.year} • {v.usage_type || 'Personal Use'} • {formatTimeAgo(v.created_at)}</p>
-
-                    <div className="mt-auto flex items-center justify-between pt-1">
-                      <span className="text-[10px] text-green-600 font-bold flex items-center gap-0.5">
-                        <ShieldCheck className="w-3 h-3" /> Verified
-                      </span>
-                      <span className="self-end text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">
-                        {v.poster_role === 'Broker' ? (t.brokerManaged || 'Broker Managed') : (t.privateOwner || 'Private Owner')}
-                      </span>
+                      <div className="mt-auto flex items-center justify-between pt-1">
+                        <span className="text-[10px] text-green-600 font-bold flex items-center gap-0.5">
+                          <ShieldCheck className="w-3 h-3" /> Verified
+                        </span>
+                        <span className="self-end text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                          {v.poster_role === 'Broker' ? (t.brokerManaged || 'Broker Managed') : (t.privateOwner || 'Private Owner')}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

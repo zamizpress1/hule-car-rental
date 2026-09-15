@@ -50,21 +50,15 @@ export const Layout = () => {
 
       {/* Floating Post Car Button */}
       <button 
-        onClick={() => {
-          if (!user) {
-            openModal('auth');
-            return;
-          }
-          if (isAdminView) {
-            navigate('/list-car', { state: { isAdminPost: true } });
-          } else {
-            navigate('/list-car');
-          }
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          navigate('/post-car');
         }}
-        className="fixed bottom-20 right-4 z-50 bg-orange-500 hover:bg-orange-600 text-white rounded-full px-4 py-2.5 shadow-lg shadow-orange-500/40 flex items-center gap-1.5 text-sm font-semibold transition-all"
+        className="fixed bottom-6 right-24 sm:right-24 z-50 bg-orange-600 text-white px-4 py-3 sm:px-5 sm:py-3.5 rounded-full font-bold shadow-xl hover:bg-orange-700 hover:shadow-2xl transition-all duration-300 flex items-center gap-2 cursor-pointer active:scale-95 text-xs sm:text-sm border border-white/20"
       >
-        <PlusCircle className="w-5 h-5" />
-        <span>Post car</span>
+        <PlusCircle className="w-4 h-4 stroke-[2.5]" />
+        <span>+ Post car</span>
       </button>
     </div>
   );

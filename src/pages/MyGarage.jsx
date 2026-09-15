@@ -90,7 +90,11 @@ export const MyGarage = () => {
           <p className="text-muted text-sm mt-1">Manage your vehicle listings</p>
         </div>
         <button
-          onClick={() => navigate('/list-car')}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = '/post-car';
+          }}
           className="bg-brand hover:bg-brand-hover text-white px-4 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
         >
           <PlusCircle className="w-4 h-4" /> Add Car
@@ -105,7 +109,11 @@ export const MyGarage = () => {
           <h3 className="text-lg font-bold text-content mb-2">No vehicles in your garage</h3>
           <p className="text-muted text-sm mb-6">List your first car to start earning with Hule የመኪና ኪራይ.</p>
           <button
-            onClick={() => navigate('/list-car')}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.location.href = '/post-car';
+            }}
             className="bg-brand hover:bg-brand-hover text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-sm"
           >
             List a Car Now

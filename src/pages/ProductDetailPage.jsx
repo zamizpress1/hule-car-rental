@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Heart, ShieldCheck, MapPin, Sliders, FileText, Building2, Lock, Loader2, Phone, CheckCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Send, Heart, ShieldCheck, MapPin, Sliders, FileText, Building2, Lock, Loader2, Phone, MessageSquare } from 'lucide-react';
 import { useApp, normalizeVehicle } from '../context/AppContext';
 import { sanitizeDescription } from '../utils/textFilters';
 import { useLanguage } from '../context/LanguageContext';
@@ -133,12 +133,14 @@ export const ProductDetailPage = () => {
     });
   };
 
-  const BROKER_PHONE = settings?.brokerPhone || '+251900000000';
+  const BROKER_PHONE = '0930175564';
   const BROKER_TELEGRAM = settings?.telegramHandle?.replace('@', '') || 'fetandrive_admin';
   const leadMessage = encodeURIComponent(`Hi Hule የመኪና ኪራይ! I am interested in renting the ${vehicle.make} ${vehicle.model} listed for ${vehicle.dailyRate || vehicle.daily_rate} ETB/day.`);
 
+  const sellerPhone = '0930175564';
+
   return (
-    <section className="space-y-6 max-w-4xl mx-auto fade-in">
+    <section className="space-y-6 max-w-4xl mx-auto fade-in pb-24">
       {/* Top Action Navigation Header */}
       <div className="flex items-center justify-between">
         <button 
@@ -214,40 +216,17 @@ export const ProductDetailPage = () => {
             </span>
             <span className="text-xs font-bold text-muted"> {t('perDay')}</span>
           </div>
-          {vehicle.advance_payment && (
+          {(vehicle.advance_payment || vehicle.advanced_payment_days || vehicle.advance_payment_days) ? (
             <div className="text-[11px] font-medium text-gray-500 mt-0.5">
               {language === 'am' ? 'ቅድመ ክፍያ' : 'Advance'}:{' '}
               <span className="text-gray-800 font-semibold">
-                {vehicle.advance_payment}
+                {vehicle.advance_payment || `${vehicle.advanced_payment_days || vehicle.advance_payment_days} ${language === 'am' ? 'ቀናት' : 'days'}`}
               </span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* Broker Verified Checklist (New) */}
-      <div className="bg-green-50 border border-green-100 rounded-xl p-4 shadow-sm">
-        <h3 className="text-base font-bold text-green-900 mb-3 flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-green-600" /> Broker Verified Checklist
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-green-800">
-            <CheckCircle className="w-4 h-4 text-green-600 shrink-0" /> Engine & Transmission Inspected
-          </div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-green-800">
-            <CheckCircle className="w-4 h-4 text-green-600 shrink-0" /> AC & Cooling System Verified
-          </div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-green-800">
-            <CheckCircle className="w-4 h-4 text-green-600 shrink-0" /> Interior Deep Cleaned
-          </div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-green-800">
-            <CheckCircle className="w-4 h-4 text-green-600 shrink-0" /> Tires & Brakes Checked
-          </div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-green-800 sm:col-span-2">
-            <CheckCircle className="w-4 h-4 text-green-600 shrink-0" /> Direct Broker Support
-          </div>
-        </div>
-      </div>
 
       {/* Triple-Action Booking Panel: Secure This Vehicle */}
       <div className="bg-white rounded-3xl p-6 shadow-sm border border-border space-y-4">
@@ -322,6 +301,28 @@ export const ProductDetailPage = () => {
           <Lock className="w-3.5 h-3.5 text-brand shrink-0" /> 
           {t('brokerProtection')}
         </p>
+      </div>
+
+      {/* Sticky Mekina.net Style Floating "Call Broker" Bottom Popup */}
+      <div className="fixed bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-[400px] z-50">
+        <a
+          href="tel:0930175564"
+          className="bg-white shadow-2xl rounded-2xl p-4 flex items-center gap-4 border border-gray-100 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer block"
+        >
+          <div className="flex items-center gap-4 w-full">
+            <div className="bg-green-500 text-white p-3 rounded-full flex-shrink-0 shadow-md">
+              <Phone className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-base sm:text-lg font-extrabold text-gray-900 leading-tight">
+                Call Broker
+              </span>
+              <span className="text-xs sm:text-sm font-semibold text-gray-500">
+                0930175564
+              </span>
+            </div>
+          </div>
+        </a>
       </div>
 
     </section>

@@ -30,6 +30,7 @@ export function App() {
               <Route index element={<MarketplacePage />} />
               <Route path="vehicle/:id" element={<ProductDetailPage />} />
               <Route path="list-car" element={<OwnerWizardPage />} />
+              <Route path="post-car" element={<OwnerWizardPage />} />
               <Route path="profile" element={<UserProfilePage />} />
               <Route path="/my-garage" element={<MyGarage />} />
               <Route path="admin" element={<AdminRoute><BrokerConsolePage /></AdminRoute>} />
