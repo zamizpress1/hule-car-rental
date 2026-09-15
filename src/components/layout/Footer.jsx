@@ -87,7 +87,7 @@ export const Footer = () => {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    window.location.href = '/post-car';
+                    navigate('/post-car');
                   }} 
                   className="hover:text-white transition-colors flex items-center gap-1.5 text-slate-300"
                 >

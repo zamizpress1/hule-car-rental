@@ -93,7 +93,7 @@ export const MyGarage = () => {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            window.location.href = '/post-car';
+            navigate('/post-car');
           }}
           className="bg-brand hover:bg-brand-hover text-white px-4 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
         >
@@ -112,7 +112,7 @@ export const MyGarage = () => {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              window.location.href = '/post-car';
+              navigate('/post-car');
             }}
             className="bg-brand hover:bg-brand-hover text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-sm"
           >

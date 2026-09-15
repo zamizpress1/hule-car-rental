@@ -52,7 +52,7 @@ export const Header = () => {
       e.stopPropagation();
     }
     setMobileMenuOpen(false);
-    window.location.href = '/post-car';
+    navigate('/post-car');
   };
 
   const getButtonLabel = () => {

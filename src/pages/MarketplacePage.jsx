@@ -363,7 +363,7 @@ export const MarketplacePage = () => {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  window.location.href = '/post-car';
+                  navigate('/post-car');
                 }}
                 className="bg-brand hover:bg-brand-hover text-white px-6 py-2 rounded-full text-xs font-bold shadow-md hover:shadow-lg transition-all w-full md:w-auto"
               >

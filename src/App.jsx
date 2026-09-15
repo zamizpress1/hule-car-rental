@@ -1,3 +1,19 @@
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { LanguageProvider } from './context/LanguageContext';
+import { AppProvider, useApp } from './context/AppContext';
+import { SettingsProvider } from './context/SettingsContext';
+import { AuthProvider } from './context/AuthContext';
+import { Layout } from './components/layout/Layout';
+import { MarketplacePage } from './pages/MarketplacePage';
+import { ProductDetailPage } from './pages/ProductDetailPage';
+import { OwnerWizardPage } from './pages/OwnerWizardPage';
+import { UserProfilePage } from './pages/UserProfilePage';
+import { BrokerConsolePage } from './pages/BrokerConsolePage';
+import { MyGarage } from './pages/MyGarage';
+import { AdminRoute } from './components/AdminRoute';
+import { supabase } from './supabaseClient';
+
 function ScrollToTop() {
   const { pathname, search, key, hash } = useLocation();
   const appState = useApp();
