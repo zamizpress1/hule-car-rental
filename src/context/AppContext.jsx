@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { parseUrlFilters } from '../utils/urlFilters';
 
 const AppContext = createContext();
 
@@ -87,7 +88,7 @@ export const AppProvider = ({ children }) => {
   const [bookings, setBookings] = useState([]);
   const [usersList, setUsersList] = useState([]);
 
-  const [filters, setFilters] = useState({ search: '', zone: 'all', category: 'all', driverMode: 'all' });
+  const [filters, setFilters] = useState({ search: '', zone: 'all', category: 'all', driverMode: 'all', make: '', model: '', year: '' });
   const [viewMode, setViewMode] = useState('explore'); // 'explore' or 'saved'
   const [selectedBookingForCommand, setSelectedBookingForCommand] = useState(null);
 
@@ -104,15 +105,45 @@ export const AppProvider = ({ children }) => {
   const [bookingDraft, setBookingDraft] = useState(null);
   const [toast, setToast] = useState({ visible: false, message: '' });
 
-  // Query live active vehicles from Supabase in a single large batch sorted by created_at DESC
-  const fetchActiveVehiclesFromSupabase = useCallback(async (limit = 100) => {
+  // Query live active vehicles from Supabase in a single batch sorted by created_at DESC.
+  // ONLY applies valid whitelist filter parameters; explicitly ignores all marketing tracking parameters (fbclid, igshid, gclid, utm_*).
+  const fetchActiveVehiclesFromSupabase = useCallback(async (limit = 100, customFilters = null) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('vehicles')
         .select('id, owner_id, make, model, year, category, zone, daily_rate, driver_mode, usage_type, poster_role, status, is_premium, description, image_url, images, created_at, advanced_payment_days, deposit_amount, requires_check, owner_phone')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(limit);
+        .eq('status', 'active');
+
+      if (customFilters) {
+        const safeFilters = parseUrlFilters(customFilters);
+        if (safeFilters.hasActiveFilters) {
+          if (safeFilters.category && safeFilters.category !== 'all') {
+            query = query.eq('category', safeFilters.category);
+          }
+          if (safeFilters.zone && safeFilters.zone !== 'all') {
+            query = query.eq('zone', safeFilters.zone);
+          }
+          if (safeFilters.make) {
+            query = query.ilike('make', `%${safeFilters.make}%`);
+          }
+          if (safeFilters.model) {
+            query = query.ilike('model', `%${safeFilters.model}%`);
+          }
+          if (safeFilters.year) {
+            query = query.eq('year', Number(safeFilters.year));
+          }
+          if (safeFilters.minPrice) {
+            query = query.gte('daily_rate', Number(safeFilters.minPrice));
+          }
+          if (safeFilters.maxPrice) {
+            query = query.lte('daily_rate', Number(safeFilters.maxPrice));
+          }
+        }
+      }
+
+      query = query.order('created_at', { ascending: false }).limit(limit);
+
+      const { data, error } = await query;
 
       if (error) {
         console.warn('Supabase vehicles fetch notice:', error.message);

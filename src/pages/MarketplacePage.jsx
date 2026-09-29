@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Sparkles, Search, SlidersHorizontal, X, ShieldCheck, Heart, MapPin, Car, Gauge, Mountain, Gem, Bus, UserCheck, ChevronRight, Phone, Send, Loader2, Percent } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useSettings } from '../context/SettingsContext';
 import { supabase } from '../lib/supabase';
+import { parseUrlFilters } from '../utils/urlFilters';
 
 function formatTimeAgo(dateString) {
   if (!dateString) return 'Recently';
@@ -35,11 +36,37 @@ const getCategoryIcon = (iconName, className) => {
 
 export const MarketplacePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { vehicles, savedIds, categories, filters, setFilters, viewMode, setViewMode, openModal, toggleSave, formatETB, showToast, refetchVehicles } = useApp();
   const { language, toggleLanguage, t } = useLanguage();
   const { settings } = useSettings();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [loading, setLoading] = useState(vehicles.length === 0);
+
+  // Synchronize filters from URL parameters on load/change,
+  // STRICTLY ignoring all marketing tracking parameters (fbclid, igshid, gclid, utm_*)
+  useEffect(() => {
+    if (!location.search) return;
+    const parsed = parseUrlFilters(location.search);
+    if (parsed.hasActiveFilters) {
+      setFilters(prev => ({
+        ...prev,
+        search: parsed.search || prev.search || '',
+        zone: parsed.zone !== 'all' ? parsed.zone : prev.zone || 'all',
+        category: parsed.category !== 'all' ? parsed.category : prev.category || 'all',
+        driverMode: parsed.driverMode !== 'all' ? parsed.driverMode : prev.driverMode || 'all',
+        make: parsed.make || prev.make || '',
+        model: parsed.model || prev.model || '',
+        year: parsed.year || prev.year || ''
+      }));
+      if (parsed.minPrice) setMinPrice(parsed.minPrice);
+      if (parsed.maxPrice) setMaxPrice(parsed.maxPrice);
+      if (parsed.sortBy) setSortBy(parsed.sortBy);
+      if (parsed.viewMode && (parsed.viewMode === 'saved' || parsed.viewMode === 'explore')) {
+        setViewMode(parsed.viewMode);
+      }
+    }
+  }, [location.search, setFilters, setViewMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -104,10 +131,13 @@ export const MarketplacePage = () => {
   };
 
   const resetFilters = () => {
-    setFilters({ search: '', zone: 'all', category: 'all', driverMode: 'all' });
+    setFilters({ search: '', zone: 'all', category: 'all', driverMode: 'all', make: '', model: '', year: '' });
     setMinPrice('');
     setMaxPrice('');
     setSortBy('newest');
+    if (location.search) {
+      navigate(location.pathname, { replace: true });
+    }
     showToast(t('reset') || 'Filters reset');
   };
 
@@ -116,12 +146,23 @@ export const MarketplacePage = () => {
   const filteredVehicles = activeVehicles.filter(v => {
     if (viewMode === 'saved' && !savedIds.has(v.id)) return false;
 
+    // Search query match (make, model, zone, category, description)
     const searchMatch = !filters.search ||
-      `${v.make} ${v.model} ${v.zone || ''} ${v.category || ''} ${v.description || ''}`.toLowerCase().includes(filters.search.toLowerCase());
+      `${v.make} ${v.model} ${v.zone || ''} ${v.category || ''} ${v.description || ''}`.toLowerCase().includes(filters.search.toLowerCase().trim());
 
-    const zoneMatch = filters.zone === 'all' || v.zone === filters.zone;
-    const categoryMatch = filters.category === 'all' || v.category === filters.category;
-    const driverMatch = filters.driverMode === 'all' || v.driverMode === filters.driverMode || v.driverMode === 'Both';
+    // Specific field matches from valid filter keys
+    const makeMatch = !filters.make ||
+      v.make.toLowerCase().includes(filters.make.toLowerCase().trim());
+
+    const modelMatch = !filters.model ||
+      v.model.toLowerCase().includes(filters.model.toLowerCase().trim());
+
+    const yearMatch = !filters.year ||
+      String(v.year) === String(filters.year).trim();
+
+    const zoneMatch = !filters.zone || filters.zone === 'all' || v.zone.toLowerCase() === filters.zone.toLowerCase();
+    const categoryMatch = !filters.category || filters.category === 'all' || v.category.toLowerCase() === filters.category.toLowerCase();
+    const driverMatch = !filters.driverMode || filters.driverMode === 'all' || v.driverMode === filters.driverMode || v.driverMode === 'Both';
 
     // Price range match
     const minP = minPrice ? Number(minPrice) : 0;
@@ -129,7 +170,7 @@ export const MarketplacePage = () => {
     const dailyRate = Number(v.dailyRate || 0);
     const priceMatch = dailyRate >= minP && dailyRate <= maxP;
 
-    return searchMatch && zoneMatch && categoryMatch && driverMatch && priceMatch;
+    return searchMatch && makeMatch && modelMatch && yearMatch && zoneMatch && categoryMatch && driverMatch && priceMatch;
   });
 
   const premiumVehicles = filteredVehicles
@@ -353,6 +394,52 @@ export const MarketplacePage = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Active Filter Chips (e.g. from URL parameters like ?make=Toyota) */}
+                {(filters.make || filters.model || filters.year || (filters.category && filters.category !== 'all') || (filters.zone && filters.zone !== 'all') || minPrice || maxPrice) && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100 text-xs">
+                    <span className="font-semibold text-slate-500">Active filters:</span>
+                    {filters.make && (
+                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full font-medium">
+                        Make: {filters.make}
+                        <button type="button" onClick={() => setFilters(prev => ({ ...prev, make: '' }))} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    {filters.model && (
+                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full font-medium">
+                        Model: {filters.model}
+                        <button type="button" onClick={() => setFilters(prev => ({ ...prev, model: '' }))} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    {filters.year && (
+                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full font-medium">
+                        Year: {filters.year}
+                        <button type="button" onClick={() => setFilters(prev => ({ ...prev, year: '' }))} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    {filters.category && filters.category !== 'all' && (
+                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full font-medium">
+                        Category: {filters.category}
+                        <button type="button" onClick={() => setFilters(prev => ({ ...prev, category: 'all' }))} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    {filters.zone && filters.zone !== 'all' && (
+                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full font-medium">
+                        Location: {filters.zone}
+                        <button type="button" onClick={() => setFilters(prev => ({ ...prev, zone: 'all' }))} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    {(minPrice || maxPrice) && (
+                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full font-medium">
+                        Price: {minPrice || '0'} - {maxPrice || '∞'} ETB
+                        <button type="button" onClick={() => { setMinPrice(''); setMaxPrice(''); }} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    <button type="button" onClick={resetFilters} className="text-slate-500 hover:text-red-600 underline font-semibold ml-1">
+                      Clear all
+                    </button>
+                  </div>
+                )}
 
               </div>
             </div>

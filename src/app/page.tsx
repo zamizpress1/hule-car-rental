@@ -8,7 +8,13 @@ export const revalidate = 0; // Dynamic server rendering for real-time car avail
  * Main Car Listing Page - Pure async Server Component (Next.js App Router)
  * NO 'use client', NO useEffect, NO useState for initial car fetch.
  */
-export default async function CarListingPage() {
+export default async function CarListingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined };
+}) {
+  const resolvedParams = searchParams ? await Promise.resolve(searchParams) : {};
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 pb-16">
       {/* HERO BANNER SECTION */}
@@ -30,7 +36,7 @@ export default async function CarListingPage() {
       {/* CAR LISTING SECTION WITH SUSPENSE STREAMING */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <Suspense fallback={<CarSkeletonGrid count={8} />}>
-          <CarListStreamer />
+          <CarListStreamer rawParams={resolvedParams} />
         </Suspense>
       </section>
     </main>

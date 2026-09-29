@@ -83,18 +83,50 @@ export const normalizeServerVehicle = (row: RawVehicle) => ({
   created_at: row.created_at || new Date().toISOString()
 });
 
+import { parseUrlFilters } from '../utils/urlFilters';
+
 /**
- * Fetch initial batch of cars directly on the server for instant Next.js streaming
+ * Fetch initial batch of cars directly on the server for instant Next.js streaming.
+ * Strictly applies only valid filter keys and ignores all marketing tracking parameters.
  */
-export async function getInitialCars(limit: number = 100) {
+export async function getInitialCars(limit: number = 100, customFilters?: any) {
   try {
     const supabase = createServerSupabaseClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from('vehicles')
       .select('id, owner_id, make, model, year, category, zone, daily_rate, driver_mode, usage_type, poster_role, status, is_premium, description, image_url, images, created_at, advanced_payment_days, deposit_amount, requires_check')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .eq('status', 'active');
+
+    if (customFilters) {
+      const safeFilters = parseUrlFilters(customFilters);
+      if (safeFilters.hasActiveFilters) {
+        if (safeFilters.category && safeFilters.category !== 'all') {
+          query = query.eq('category', safeFilters.category);
+        }
+        if (safeFilters.zone && safeFilters.zone !== 'all') {
+          query = query.eq('zone', safeFilters.zone);
+        }
+        if (safeFilters.make) {
+          query = query.ilike('make', `%${safeFilters.make}%`);
+        }
+        if (safeFilters.model) {
+          query = query.ilike('model', `%${safeFilters.model}%`);
+        }
+        if (safeFilters.year) {
+          query = query.eq('year', Number(safeFilters.year));
+        }
+        if (safeFilters.minPrice) {
+          query = query.gte('daily_rate', Number(safeFilters.minPrice));
+        }
+        if (safeFilters.maxPrice) {
+          query = query.lte('daily_rate', Number(safeFilters.maxPrice));
+        }
+      }
+    }
+
+    query = query.order('created_at', { ascending: false }).limit(limit);
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Server Supabase fetch error:', error.message);

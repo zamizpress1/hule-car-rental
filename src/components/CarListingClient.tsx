@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Search, ShieldCheck, Heart, MapPin, Car, Gauge, Mountain, Gem, Bus, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { normalizeServerVehicle, RawVehicle } from '../lib/supabase-server';
+import { parseUrlFilters } from '../utils/urlFilters';
 
 export interface Vehicle {
   id: string;
@@ -43,6 +44,7 @@ export interface Vehicle {
 
 interface CarListingClientProps {
   initialCars: Vehicle[];
+  initialFilters?: any;
 }
 
 function formatTimeAgo(dateString?: string) {
@@ -62,10 +64,47 @@ function formatTimeAgo(dateString?: string) {
   return `${diffInMonths}mo ago`;
 }
 
-export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars }) => {
+export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars, initialFilters }) => {
   // Vehicles state seeded directly from Server Component stream (continuous feed)
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialCars || []);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState(initialFilters?.search || '');
+  const [make, setMake] = useState(initialFilters?.make || '');
+  const [model, setModel] = useState(initialFilters?.model || '');
+  const [year, setYear] = useState(initialFilters?.year || '');
+  const [zone, setZone] = useState(initialFilters?.zone || 'all');
+  const [category, setCategory] = useState(initialFilters?.category || 'all');
+  const [minPrice, setMinPrice] = useState(initialFilters?.minPrice || '');
+  const [maxPrice, setMaxPrice] = useState(initialFilters?.maxPrice || '');
+  const [contactInfo, setContactInfo] = useState('');
+  const [waitlistStatus, setWaitlistStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+
+  // Synchronize filters from URL parameters on mount,
+  // STRICTLY ignoring all marketing tracking parameters (fbclid, igshid, gclid, utm_*)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.location.search) return;
+    const parsed = parseUrlFilters(window.location.search);
+    if (parsed.hasActiveFilters) {
+      if (parsed.search) setSearch(parsed.search);
+      if (parsed.make) setMake(parsed.make);
+      if (parsed.model) setModel(parsed.model);
+      if (parsed.year) setYear(parsed.year);
+      if (parsed.zone && parsed.zone !== 'all') setZone(parsed.zone);
+      if (parsed.category && parsed.category !== 'all') setCategory(parsed.category);
+      if (parsed.minPrice) setMinPrice(parsed.minPrice);
+      if (parsed.maxPrice) setMaxPrice(parsed.maxPrice);
+    }
+  }, []);
+
+  const handleToggleSave = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +114,7 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars 
     try {
       const { error } = await supabase
         .from('saved_search_alerts')
-        .insert([{ renter_contact: contactInfo, search_keyword: search }]);
+        .insert([{ renter_contact: contactInfo, search_keyword: search || make || model || 'general' }]);
 
       if (error) throw error;
       setWaitlistStatus('success');
@@ -87,23 +126,39 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars 
 
   const resetFilters = () => {
     setSearch('');
+    setMake('');
+    setModel('');
+    setYear('');
     setZone('all');
     setCategory('all');
     setMinPrice('');
     setMaxPrice('');
+    if (typeof window !== 'undefined' && window.location.search) {
+      try {
+        const url = new URL(window.location.href);
+        url.search = '';
+        window.history.replaceState({}, '', url.pathname);
+      } catch {}
+    }
   };
 
   // Filtered cars computed instantly on client & sorted newest first
   const filteredFleet = vehicles
     .filter(v => {
       const matchesSearch = !search.trim() || 
-        `${v.make} ${v.model} ${v.zone} ${v.category}`.toLowerCase().includes(search.toLowerCase().trim());
-      const matchesZone = zone === 'all' || v.zone === zone;
-      const matchesCategory = category === 'all' || v.category === category;
+        `${v.make} ${v.model} ${v.zone} ${v.category} ${v.description || ''}`.toLowerCase().includes(search.toLowerCase().trim());
+      const matchesMake = !make.trim() ||
+        v.make.toLowerCase().includes(make.toLowerCase().trim());
+      const matchesModel = !model.trim() ||
+        v.model.toLowerCase().includes(model.toLowerCase().trim());
+      const matchesYear = !year.trim() ||
+        String(v.year) === year.trim();
+      const matchesZone = zone === 'all' || v.zone.toLowerCase() === zone.toLowerCase();
+      const matchesCategory = category === 'all' || v.category.toLowerCase() === category.toLowerCase();
       const matchesMinPrice = !minPrice || v.dailyRate >= Number(minPrice);
       const matchesMaxPrice = !maxPrice || v.dailyRate <= Number(maxPrice);
 
-      return matchesSearch && matchesZone && matchesCategory && matchesMinPrice && matchesMaxPrice;
+      return matchesSearch && matchesMake && matchesModel && matchesYear && matchesZone && matchesCategory && matchesMinPrice && matchesMaxPrice;
     })
     .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 
