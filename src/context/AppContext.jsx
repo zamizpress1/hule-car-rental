@@ -6,6 +6,7 @@ import { parseUrlFilters } from '../utils/urlFilters';
 const AppContext = createContext();
 
 export const normalizeVehicle = (row) => ({
+  ...row,
   id: String(row.id),
   owner_id: row.owner_id || null,
   make: row.make || row.brand || '',
@@ -14,7 +15,9 @@ export const normalizeVehicle = (row) => ({
   category: row.category || 'Economy',
   zone: row.zone || row.location || 'Bole',
   dailyRate: Number(row.daily_rate || row.dailyRate || row.price || 0),
+  daily_rate: Number(row.daily_rate || row.dailyRate || row.price || 0),
   driverMode: row.driver_mode || row.driverMode || 'Self-Drive',
+  driver_mode: row.driver_mode || row.driverMode || 'Self-Drive',
   transmission: row.transmission || 'Auto',
   fuel: row.fuel || row.fuel_type || 'Petrol',
   body: row.body || row.body_type || 'Hatchback',
@@ -38,6 +41,7 @@ export const normalizeVehicle = (row) => ({
   collateral: row.collateral || ['Kebele ID', 'Deposit'],
   description: row.description || 'Well-maintained vehicle in excellent condition. Ideal for city driving or long-distance rentals across Ethiopia.',
   image: row.image || row.image_url || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
+  image_url: row.image_url || row.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
   images: Array.isArray(row.images) && row.images.length > 0 ? row.images : [row.image_url || row.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'],
   created_at: row.created_at || new Date().toISOString()
 });
@@ -106,13 +110,18 @@ export const AppProvider = ({ children }) => {
   const [toast, setToast] = useState({ visible: false, message: '' });
 
   // Query live active vehicles from Supabase in a single batch sorted by created_at DESC.
+  // Force fresh data on every fetch with no-cache headers.
   // ONLY applies valid whitelist filter parameters; explicitly ignores all marketing tracking parameters (fbclid, igshid, gclid, utm_*).
   const fetchActiveVehiclesFromSupabase = useCallback(async (limit = 16, customFilters = null) => {
     try {
+      // Force fresh data on every fetch
       let query = supabase
         .from('vehicles')
-        .select('id, make, model, year, daily_rate, image_url, images, status, zone')
-        .eq('status', 'active');
+        .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .setHeader('Pragma', 'no-cache');
 
       if (customFilters) {
         const safeFilters = parseUrlFilters(customFilters);
@@ -141,7 +150,9 @@ export const AppProvider = ({ children }) => {
         }
       }
 
-      query = query.order('created_at', { ascending: false }).limit(limit);
+      if (limit) {
+        query = query.limit(limit);
+      }
 
       const { data, error } = await query;
 
@@ -470,6 +481,7 @@ export const AppProvider = ({ children }) => {
       setBookingDraft,
       selectedBookingForCommand,
       formatETB,
+      fetchVehicles: fetchActiveVehiclesFromSupabase,
       refetchVehicles: fetchActiveVehiclesFromSupabase,
       refetchPendingVehicles: fetchPendingVehiclesFromSupabase,
       refetchBookings: fetchBookingsFromSupabase,

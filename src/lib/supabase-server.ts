@@ -94,8 +94,11 @@ export async function getInitialCars(limit: number = 16, customFilters?: any) {
     const supabase = createServerSupabaseClient();
     let query = supabase
       .from('vehicles')
-      .select('id, make, model, year, daily_rate, image_url, images, status, zone')
-      .eq('status', 'active');
+      .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+      .setHeader('Pragma', 'no-cache');
 
     if (customFilters) {
       const safeFilters = parseUrlFilters(customFilters);
@@ -124,7 +127,9 @@ export async function getInitialCars(limit: number = 16, customFilters?: any) {
       }
     }
 
-    query = query.order('created_at', { ascending: false }).limit(limit);
+    if (limit) {
+      query = query.limit(limit);
+    }
 
     const { data, error } = await query;
 

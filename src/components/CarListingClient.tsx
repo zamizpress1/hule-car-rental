@@ -97,6 +97,27 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
     }
   }, []);
 
+  // Supabase Realtime Subscription (Instant Live Updates)
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime:vehicles_client')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'vehicles' },
+        (payload) => {
+          if (payload?.new) {
+            const newCar = normalizeServerVehicle(payload.new as RawVehicle);
+            setVehicles((prev) => [newCar, ...prev.filter(v => String(v.id) !== String(newCar.id))]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const handleToggleSave = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSavedIds(prev => {
