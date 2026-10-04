@@ -35,7 +35,7 @@ export default async function CarListingPage({
 
       {/* CAR LISTING SECTION WITH SUSPENSE STREAMING */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <Suspense fallback={<CarSkeletonGrid count={8} />}>
+        <Suspense fallback={<CarSkeletonGrid count={16} showHeader={true} />}>
           <CarListStreamer rawParams={resolvedParams} />
         </Suspense>
       </section>

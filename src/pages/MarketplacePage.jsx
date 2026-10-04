@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useSettings } from '../context/SettingsContext';
 import { supabase } from '../lib/supabase';
 import { parseUrlFilters } from '../utils/urlFilters';
+import CarSkeletonGrid, { CarSkeletonCard } from '../components/CarSkeletonGrid';
 
 function formatTimeAgo(dateString) {
   if (!dateString) return 'Recently';
@@ -73,7 +74,7 @@ export const MarketplacePage = () => {
     const loadData = async () => {
       try {
         if (vehicles.length === 0) {
-          await refetchVehicles(100);
+          await refetchVehicles(16);
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -219,29 +220,37 @@ export const MarketplacePage = () => {
 
         {/* The Container */}
         <div className="flex overflow-x-auto gap-4 snap-x hide-scrollbar pb-2">
-          {premiumVehicles.map(v => {
-            const isSaved = savedIds.has(v.id);
-            let rawAdv = Number(v.advanced_payment_days || v.advance_days || 0);
-            if (!rawAdv && v.advance_payment) {
-              const match = String(v.advance_payment).match(/\d+/);
-              if (match) rawAdv = parseInt(match[0], 10);
-            }
-            const calculatedMonths = rawAdv > 0 ? (rawAdv >= 30 ? Math.round(rawAdv / 30) : rawAdv) : 0;
+          {loading ? (
+            [...Array(4)].map((_, i) => (
+              <div key={i} className="shrink-0 w-[45%] sm:w-[220px] md:w-[280px] snap-center">
+                <CarSkeletonCard />
+              </div>
+            ))
+          ) : (
+            <>
+              {premiumVehicles.map(v => {
+                const isSaved = savedIds.has(v.id);
+                let rawAdv = Number(v.advanced_payment_days || v.advance_days || 0);
+                if (!rawAdv && v.advance_payment) {
+                  const match = String(v.advance_payment).match(/\d+/);
+                  if (match) rawAdv = parseInt(match[0], 10);
+                }
+                const calculatedMonths = rawAdv > 0 ? (rawAdv >= 30 ? Math.round(rawAdv / 30) : rawAdv) : 0;
 
-            return (
-              <div
-                key={v.id}
-                onClick={() => navigate(`/vehicle/${v.id}`)}
-                className="shrink-0 w-[45%] sm:w-[220px] md:w-[280px] snap-center bg-white rounded-lg border border-gray-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden"
-              >
-                <div className="relative w-full h-32 md:h-48 bg-slate-100 overflow-hidden">
-                  <img
-                    src={v.image || v.image_url || (v.images && v.images[0]) || 'https://placehold.co/600x400?text=No+Image'}
-                    alt={`${v.make} ${v.model}`}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
+                return (
+                  <div
+                    key={v.id}
+                    onClick={() => navigate(`/vehicle/${v.id}`)}
+                    className="shrink-0 w-[45%] sm:w-[220px] md:w-[280px] snap-center bg-white rounded-lg border border-gray-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden"
+                  >
+                    <div className="relative w-full aspect-[16/10] bg-slate-100 overflow-hidden">
+                      <img
+                        src={v.image || v.image_url || (v.images && v.images[0]) || 'https://placehold.co/600x400?text=No+Image'}
+                        alt={`${v.make} ${v.model}`}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
 
                   {v.urgency_tag && (
                     <div className="bg-red-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-md absolute top-0 left-0 z-10">
@@ -300,10 +309,12 @@ export const MarketplacePage = () => {
             );
           })}
 
-          {premiumVehicles.length === 0 && (
-            <div className="w-full py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
-              No premium posts currently available.
-            </div>
+              {premiumVehicles.length === 0 && (
+                <div className="w-full py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                  No premium posts currently available.
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -473,23 +484,7 @@ export const MarketplacePage = () => {
         </div>
 
         {loading && (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-6 px-2 md:px-0">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs animate-pulse">
-                <div className="w-full h-32 md:h-48 bg-slate-200/80 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer" />
-                </div>
-                <div className="p-2.5 space-y-2">
-                  <div className="h-4 bg-slate-200 rounded w-3/4" />
-                  <div className="h-3 bg-slate-100 rounded w-1/2" />
-                  <div className="flex justify-between items-center pt-2">
-                    <div className="h-4 bg-slate-200 rounded w-1/3" />
-                    <div className="h-3 bg-slate-200 rounded w-1/4" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <CarSkeletonGrid count={16} />
         )}
 
         {!loading && filteredFleet.length === 0 && (
@@ -555,7 +550,7 @@ export const MarketplacePage = () => {
                     onClick={() => navigate(`/vehicle/${v.id}`)}
                     className="bg-white rounded-lg border border-gray-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden"
                   >
-                    <div className="relative w-full h-32 md:h-48 bg-slate-100 overflow-hidden">
+                    <div className="relative w-full aspect-[16/10] bg-slate-100 overflow-hidden">
                       <img
                         src={v.image || v.image_url || (v.images && v.images[0]) || 'https://placehold.co/600x400?text=No+Image'}
                         alt={`${v.make} ${v.model}`}

@@ -127,6 +127,8 @@ export const MyGarage = () => {
                 <img 
                   src={v.image || v.image_url || (v.images && v.images[0]) || 'https://placehold.co/600x400?text=No+Image'} 
                   alt={`${v.make} ${v.model}`}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover" 
                 />
                 <div className="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur text-white px-2 py-0.5 rounded text-[10px] font-bold">

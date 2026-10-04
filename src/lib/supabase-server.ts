@@ -89,12 +89,12 @@ import { parseUrlFilters } from '../utils/urlFilters';
  * Fetch initial batch of cars directly on the server for instant Next.js streaming.
  * Strictly applies only valid filter keys and ignores all marketing tracking parameters.
  */
-export async function getInitialCars(limit: number = 100, customFilters?: any) {
+export async function getInitialCars(limit: number = 16, customFilters?: any) {
   try {
     const supabase = createServerSupabaseClient();
     let query = supabase
       .from('vehicles')
-      .select('id, owner_id, make, model, year, category, zone, daily_rate, driver_mode, usage_type, poster_role, status, is_premium, description, image_url, images, created_at, advanced_payment_days, deposit_amount, requires_check')
+      .select('id, make, model, year, daily_rate, image_url, images, status, zone')
       .eq('status', 'active');
 
     if (customFilters) {

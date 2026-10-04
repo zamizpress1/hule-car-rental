@@ -32,14 +32,17 @@ export const ProductDetailPage = () => {
     const loadVehicle = async () => {
       setLoading(true);
 
-      // Check active context state first
+      // Check active context state first for instantaneous display
       const existing = vehicles.find(v => String(v.id) === String(id) && v.status === 'active');
       if (existing) {
         if (isMounted) {
           setVehicle(existing);
-          setLoading(false);
         }
-        return;
+        // If complete vehicle details are already loaded, finish early
+        if (existing.description && existing.supplier && existing.transmission) {
+          if (isMounted) setLoading(false);
+          return;
+        }
       }
 
       // Query Supabase for active vehicle
@@ -173,6 +176,7 @@ export const ProductDetailPage = () => {
           <img 
             src={vehicle.images?.[activeImageIndex] || vehicle.image} 
             alt={`${vehicle.make} ${vehicle.model}`}
+            decoding="async"
             className="w-full h-full object-cover transition-opacity duration-300" 
           />
           <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-content shadow-sm flex items-center gap-1">
@@ -189,7 +193,7 @@ export const ProductDetailPage = () => {
                 onClick={() => setActiveImageIndex(idx)}
                 className={`shrink-0 w-20 h-16 rounded-xl overflow-hidden border-2 transition-all ${activeImageIndex === idx ? 'border-brand opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`}
               >
-                <img src={img} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" />
+                <img src={img} alt={`Thumbnail ${idx}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
               </button>
             ))}
           </div>

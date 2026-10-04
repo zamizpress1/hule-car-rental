@@ -5,6 +5,7 @@ import { Sparkles, Search, ShieldCheck, Heart, MapPin, Car, Gauge, Mountain, Gem
 import { supabase } from '../lib/supabase';
 import { normalizeServerVehicle, RawVehicle } from '../lib/supabase-server';
 import { parseUrlFilters } from '../utils/urlFilters';
+import CarSkeletonGrid from './CarSkeletonGrid';
 
 export interface Vehicle {
   id: string;
@@ -314,11 +315,12 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
                   key={v.id}
                   className="bg-white rounded-lg border border-slate-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden"
                 >
-                  <div className="relative w-full h-32 md:h-48 bg-slate-100 overflow-hidden">
+                  <div className="relative w-full aspect-[16/10] bg-slate-100 overflow-hidden">
                     <img
                       src={v.image || (v.images && v.images[0]) || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'}
                       alt={`${v.make} ${v.model}`}
                       loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
 

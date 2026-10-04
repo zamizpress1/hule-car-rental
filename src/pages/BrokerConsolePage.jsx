@@ -462,6 +462,8 @@ export const BrokerConsolePage = () => {
                         <img
                           src={v.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'}
                           alt={`${v.make} ${v.model}`}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -618,7 +620,7 @@ export const BrokerConsolePage = () => {
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 rounded-lg overflow-hidden bg-background shrink-0 border border-border relative">
-                                <img src={v?.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=200&auto=format&fit=crop'} alt={v?.make} className="w-full h-full object-cover" />
+                                <img src={v?.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=200&auto=format&fit=crop'} alt={v?.make} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                                 {v.is_premium && (
                                   <div className="absolute top-0 right-0 bg-amber-400 text-white p-[2px] rounded-bl-md shadow-xs">
                                     <Star className="w-2.5 h-2.5 fill-current" />

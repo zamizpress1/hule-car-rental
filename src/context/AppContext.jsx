@@ -107,11 +107,11 @@ export const AppProvider = ({ children }) => {
 
   // Query live active vehicles from Supabase in a single batch sorted by created_at DESC.
   // ONLY applies valid whitelist filter parameters; explicitly ignores all marketing tracking parameters (fbclid, igshid, gclid, utm_*).
-  const fetchActiveVehiclesFromSupabase = useCallback(async (limit = 100, customFilters = null) => {
+  const fetchActiveVehiclesFromSupabase = useCallback(async (limit = 16, customFilters = null) => {
     try {
       let query = supabase
         .from('vehicles')
-        .select('id, owner_id, make, model, year, category, zone, daily_rate, driver_mode, usage_type, poster_role, status, is_premium, description, image_url, images, created_at, advanced_payment_days, deposit_amount, requires_check, owner_phone')
+        .select('id, make, model, year, daily_rate, image_url, images, status, zone')
         .eq('status', 'active');
 
       if (customFilters) {
@@ -374,7 +374,7 @@ export const AppProvider = ({ children }) => {
   }, [user?.id]);
 
   useEffect(() => {
-    fetchActiveVehiclesFromSupabase();
+    fetchActiveVehiclesFromSupabase(16);
     fetchPendingVehiclesFromSupabase();
     fetchBookingsFromSupabase();
     fetchUsersFromSupabase();

@@ -3,8 +3,8 @@ import React from 'react';
 export const CarSkeletonCard: React.FC = () => {
   return (
     <div className="bg-white rounded-lg border border-slate-200/80 overflow-hidden shadow-xs animate-pulse flex flex-col">
-      {/* Skeleton Image Area */}
-      <div className="relative w-full h-32 md:h-48 bg-slate-200/90 overflow-hidden">
+      {/* Skeleton Image Area with fixed aspect-ratio container */}
+      <div className="relative w-full aspect-[16/10] bg-slate-200/90 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer" />
         
         {/* Top Badges Skeleton */}
@@ -35,13 +35,15 @@ export const CarSkeletonCard: React.FC = () => {
   );
 };
 
-export const CarSkeletonGrid: React.FC<{ count?: number }> = ({ count = 8 }) => {
+export const CarSkeletonGrid: React.FC<{ count?: number; showHeader?: boolean }> = ({ count = 16, showHeader = false }) => {
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between px-2 md:px-0">
-        <div className="h-5 bg-slate-200 rounded w-36 animate-pulse" />
-        <div className="h-4 bg-slate-200 rounded w-24 animate-pulse" />
-      </div>
+      {showHeader && (
+        <div className="flex items-center justify-between px-2 md:px-0">
+          <div className="h-5 bg-slate-200 rounded w-36 animate-pulse" />
+          <div className="h-4 bg-slate-200 rounded w-24 animate-pulse" />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-6 px-2 md:px-0">
         {Array.from({ length: count }).map((_, i) => (
