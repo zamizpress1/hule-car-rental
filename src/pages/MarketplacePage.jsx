@@ -38,58 +38,30 @@ const getCategoryIcon = (iconName, className) => {
 export const MarketplacePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { vehicles, setVehicles, savedIds, categories, filters, setFilters, viewMode, setViewMode, openModal, toggleSave, formatETB, showToast, refetchVehicles } = useApp();
+  const {
+    vehicles,
+    setVehicles,
+    loadingVehicles,
+    savedIds,
+    categories,
+    filters,
+    setFilters,
+    viewMode,
+    setViewMode,
+    openModal,
+    toggleSave,
+    formatETB,
+    showToast,
+    refetchVehicles
+  } = useApp();
   const { language, toggleLanguage, t } = useLanguage();
   const { settings } = useSettings();
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [loading, setLoading] = useState(vehicles.length === 0);
+  const loading = (loadingVehicles ?? false) && vehicles.length === 0;
 
-  // 1. Initial fetch with Cache-Busting Headers
-  const fetchVehicles = async () => {
-    try {
-      if (vehicles.length === 0) setLoading(true);
-      // Force fresh data on every fetch
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-        .setHeader('Pragma', 'no-cache');
-
-      if (error) {
-        console.warn('Supabase vehicles fetch notice:', error.message);
-        return;
-      }
-
-      if (data) {
-        const activeRows = data.map(normalizeVehicle);
-        setVehicles(prev => {
-          const incomingIds = new Set(activeRows.map(r => String(r.id)));
-          const recentOptimistic = prev.filter(p => 
-            !incomingIds.has(String(p.id)) && 
-            (Date.now() - new Date(p.created_at || Date.now()).getTime() < 120000)
-          );
-          const merged = [...recentOptimistic, ...activeRows];
-          try {
-            localStorage.setItem('cached_active_vehicles', JSON.stringify(merged));
-          } catch {}
-          return merged;
-        });
-      }
-    } catch (err) {
-      console.error('Error in fetchVehicles:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 2: Supabase Realtime Subscription (Instant Live Updates)
+  // Supabase Realtime Subscription (Instant Live Updates)
   useEffect(() => {
-    // 1. Initial fetch
-    fetchVehicles();
-
-    // 2. Realtime listener for new listings
+    // Realtime listener for new listings
     const channel = supabase
       .channel('realtime:vehicles')
       .on(
@@ -99,12 +71,20 @@ export const MarketplacePage = () => {
           // Prepend the brand new car to the top of the feed immediately
           if (payload?.new) {
             const newCar = normalizeVehicle(payload.new);
-            setVehicles((prev) => [newCar, ...prev.filter(v => String(v.id) !== String(newCar.id))]);
-            try {
-              const cached = localStorage.getItem('cached_active_vehicles');
-              const list = cached ? JSON.parse(cached) : [];
-              localStorage.setItem('cached_active_vehicles', JSON.stringify([newCar, ...list.filter(v => String(v.id) !== String(newCar.id))]));
-            } catch {}
+            setVehicles((prev) => {
+              const filtered = prev.filter(v => String(v.id) !== String(newCar.id));
+              const updated = [newCar, ...filtered];
+              // Strictly enforce deterministic sorting: created_at DESC, id DESC
+              updated.sort((a, b) => {
+                const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                if (timeDiff !== 0) return timeDiff;
+                return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+              });
+              try {
+                localStorage.setItem('cached_active_vehicles', JSON.stringify(updated));
+              } catch {}
+              return updated;
+            });
           }
         }
       )
@@ -113,7 +93,7 @@ export const MarketplacePage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [setVehicles]);
 
   // Synchronize filters from URL parameters on load/change,
   // STRICTLY ignoring all marketing tracking parameters (fbclid, igshid, gclid, utm_*)
@@ -224,7 +204,7 @@ export const MarketplacePage = () => {
     // Price range match
     const minP = minPrice ? Number(minPrice) : 0;
     const maxP = maxPrice ? Number(maxPrice) : Infinity;
-    const dailyRate = Number(v.dailyRate || 0);
+    const dailyRate = Number(v.dailyRate || v.daily_rate || 0);
     const priceMatch = dailyRate >= minP && dailyRate <= maxP;
 
     return searchMatch && makeMatch && modelMatch && yearMatch && zoneMatch && categoryMatch && driverMatch && priceMatch;
@@ -232,15 +212,31 @@ export const MarketplacePage = () => {
 
   const premiumVehicles = filteredVehicles
     .filter(v => v.is_premium === true)
-    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    .sort((a, b) => {
+      const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+    });
 
   const filteredFleet = filteredVehicles
     .filter(v => v.is_premium !== true)
     .sort((a, b) => {
-      if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-      if (sortBy === 'price_asc') return Number(a.dailyRate) - Number(b.dailyRate);
-      if (sortBy === 'price_desc') return Number(b.dailyRate) - Number(a.dailyRate);
-      return 0;
+      if (sortBy === 'newest') {
+        const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+      }
+      if (sortBy === 'price_asc') {
+        const priceDiff = Number(a.dailyRate || a.daily_rate || 0) - Number(b.dailyRate || b.daily_rate || 0);
+        if (priceDiff !== 0) return priceDiff;
+        return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+      }
+      if (sortBy === 'price_desc') {
+        const priceDiff = Number(b.dailyRate || b.daily_rate || 0) - Number(a.dailyRate || a.daily_rate || 0);
+        if (priceDiff !== 0) return priceDiff;
+        return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+      }
+      return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
     });
 
   return (

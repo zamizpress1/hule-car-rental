@@ -97,6 +97,7 @@ export async function getInitialCars(limit: number = 16, customFilters?: any) {
       .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
       .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
       .setHeader('Pragma', 'no-cache');
 

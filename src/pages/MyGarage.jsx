@@ -24,7 +24,10 @@ export const MyGarage = () => {
         .from('vehicles')
         .select('*')
         .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .setHeader('Pragma', 'no-cache');
 
       if (error) throw error;
       console.log('My Garage Vehicles:', data);

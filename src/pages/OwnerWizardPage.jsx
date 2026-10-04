@@ -334,14 +334,29 @@ export const OwnerWizardPage = () => {
 
       // Step 2: Instant Feed Refresh & Optimistic UI
       // Prepend the new car directly into the global vehicles state so it appears at the top instantly
-      const normalizedNewCar = normalizeVehicle(insertedVehicle);
+      const normalizedNewCar = { ...normalizeVehicle(insertedVehicle), is_optimistic: true };
       if (typeof setVehicles === 'function') {
-        setVehicles(prev => [normalizedNewCar, ...prev.filter(v => String(v.id) !== String(normalizedNewCar.id))]);
+        setVehicles(prev => {
+          const filtered = prev.filter(v => String(v.id) !== String(normalizedNewCar.id));
+          const updated = [normalizedNewCar, ...filtered];
+          updated.sort((a, b) => {
+            const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+            if (timeDiff !== 0) return timeDiff;
+            return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+          });
+          return updated;
+        });
       }
       try {
         const cached = localStorage.getItem('cached_active_vehicles');
         const list = cached ? JSON.parse(cached) : [];
-        localStorage.setItem('cached_active_vehicles', JSON.stringify([normalizedNewCar, ...list.filter(v => String(v.id) !== String(normalizedNewCar.id))]));
+        const updated = [normalizedNewCar, ...list.filter(v => String(v.id) !== String(normalizedNewCar.id))];
+        updated.sort((a, b) => {
+          const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+          if (timeDiff !== 0) return timeDiff;
+          return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+        });
+        localStorage.setItem('cached_active_vehicles', JSON.stringify(updated));
       } catch {}
 
       addGarageVehicle(insertedVehicle);

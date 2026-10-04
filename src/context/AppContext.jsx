@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { parseUrlFilters } from '../utils/urlFilters';
@@ -78,15 +78,25 @@ const CATEGORIES = [
 
 export const AppProvider = ({ children }) => {
   const { user } = useAuth();
+  const vehiclesAbortControllerRef = useRef(null);
   const [savedIds, setSavedIds] = useState(new Set());
   const [vehicles, setVehicles] = useState(() => {
     try {
       const cached = localStorage.getItem('cached_active_vehicles');
-      return cached ? JSON.parse(cached) : [];
+      if (!cached) return [];
+      const parsed = JSON.parse(cached);
+      if (!Array.isArray(parsed)) return [];
+      // Deterministically sort cached vehicles by newest created_at, then id DESC
+      return parsed.sort((a, b) => {
+        const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+      });
     } catch {
       return [];
     }
   });
+  const [loadingVehicles, setLoadingVehicles] = useState(true);
   const [pendingVehicles, setPendingVehicles] = useState([]);
   const [myGarage, setMyGarage] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -109,19 +119,31 @@ export const AppProvider = ({ children }) => {
   const [bookingDraft, setBookingDraft] = useState(null);
   const [toast, setToast] = useState({ visible: false, message: '' });
 
-  // Query live active vehicles from Supabase in a single batch sorted by created_at DESC.
-  // Force fresh data on every fetch with no-cache headers.
+  // Single consolidated query source for live active vehicles from Supabase.
+  // Strictly enforces deterministic sorting by newest first: .order('created_at', { ascending: false }).order('id', { ascending: false }).
+  // Eliminates race conditions via AbortController so that only the latest query updates state.
   // ONLY applies valid whitelist filter parameters; explicitly ignores all marketing tracking parameters (fbclid, igshid, gclid, utm_*).
   const fetchActiveVehiclesFromSupabase = useCallback(async (limit = 16, customFilters = null) => {
+    // Abort any previous in-flight request to eliminate race conditions
+    if (vehiclesAbortControllerRef.current) {
+      vehiclesAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    vehiclesAbortControllerRef.current = controller;
+
+    setLoadingVehicles(true);
+
     try {
-      // Force fresh data on every fetch
+      // Force fresh data on every fetch with cache-busting headers and deterministic ordering
       let query = supabase
         .from('vehicles')
         .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at')
         .eq('status', 'active')
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-        .setHeader('Pragma', 'no-cache');
+        .setHeader('Pragma', 'no-cache')
+        .abortSignal(controller.signal);
 
       if (customFilters) {
         const safeFilters = parseUrlFilters(customFilters);
@@ -156,7 +178,13 @@ export const AppProvider = ({ children }) => {
 
       const { data, error } = await query;
 
+      // If this request was superseded by a newer query, discard results
+      if (controller.signal.aborted) {
+        return { data: [] };
+      }
+
       if (error) {
+        if (error.message?.includes('AbortError')) return { data: [] };
         console.warn('Supabase vehicles fetch notice:', error.message);
         return { data: [] };
       }
@@ -165,14 +193,29 @@ export const AppProvider = ({ children }) => {
 
       if (data) {
         const activeRows = data.map(normalizeVehicle);
+        // Strictly enforce deterministic sorting: created_at DESC, id DESC
+        activeRows.sort((a, b) => {
+          const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+          if (timeDiff !== 0) return timeDiff;
+          return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+        });
+
         setVehicles(prev => {
-          // Preserve optimistic vehicles added recently (< 2 min) that might not yet be returned by Supabase
+          // Only preserve genuine pending optimistic additions created in the last 60 seconds
           const incomingIds = new Set(activeRows.map(r => String(r.id)));
-          const recentOptimistic = prev.filter(p => 
+          const validOptimistic = prev.filter(p => 
+            p && p.is_optimistic === true &&
             !incomingIds.has(String(p.id)) && 
-            (Date.now() - new Date(p.created_at || Date.now()).getTime() < 120000)
+            p.created_at && (Date.now() - new Date(p.created_at).getTime() < 60000)
           );
-          const merged = [...recentOptimistic, ...activeRows];
+
+          const merged = [...validOptimistic, ...activeRows];
+          merged.sort((a, b) => {
+            const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+            if (timeDiff !== 0) return timeDiff;
+            return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+          });
+
           try {
             localStorage.setItem('cached_active_vehicles', JSON.stringify(merged));
           } catch {}
@@ -182,19 +225,25 @@ export const AppProvider = ({ children }) => {
       }
       return { data: [] };
     } catch (err) {
+      if (controller.signal.aborted || err?.name === 'AbortError') return { data: [] };
       console.error('Error fetching active vehicles from Supabase:', err);
       return { data: [] };
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoadingVehicles(false);
+      }
     }
   }, []);
 
-  // Query pending_review vehicles ordered by created_at DESC
+  // Query pending_review vehicles ordered by created_at DESC, id DESC
   const fetchPendingVehiclesFromSupabase = async () => {
     try {
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
         .eq('status', 'pending_review')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
 
       if (error) {
         console.warn('Supabase pending vehicles fetch notice:', error.message);
@@ -218,7 +267,8 @@ export const AppProvider = ({ children }) => {
         .from('vehicles')
         .select('*')
         .eq('owner_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
 
       if (error) {
         console.warn('Supabase owner garage fetch notice:', error.message);
@@ -433,12 +483,17 @@ export const AppProvider = ({ children }) => {
 
 
   const addGarageVehicle = (vehicleData) => {
-    const normalized = normalizeVehicle(vehicleData);
+    const normalized = { ...normalizeVehicle(vehicleData), is_optimistic: true };
     setMyGarage(prev => [normalized, ...prev.filter(v => String(v.id) !== String(normalized.id))]);
     // Instantly prepend to active public vehicles feed so it appears immediately at the top without manual reload
     setVehicles(prev => {
       const filtered = prev.filter(v => String(v.id) !== String(normalized.id));
       const updated = [normalized, ...filtered];
+      updated.sort((a, b) => {
+        const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+      });
       try {
         localStorage.setItem('cached_active_vehicles', JSON.stringify(updated));
       } catch {}
@@ -455,6 +510,7 @@ export const AppProvider = ({ children }) => {
       user,
       savedIds,
       vehicles,
+      loadingVehicles,
       pendingVehicles,
       myGarage,
       setMyGarage,

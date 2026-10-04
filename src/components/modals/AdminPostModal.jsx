@@ -182,9 +182,18 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
         showToast('Error publishing premium vehicle');
       } else {
         const newVehicle = (insertedData && insertedData[0]) ? insertedData[0] : vehicleRecord;
-        const normalized = normalizeVehicle(newVehicle);
+        const normalized = { ...normalizeVehicle(newVehicle), is_optimistic: true };
         if (typeof setVehicles === 'function') {
-          setVehicles(prev => [normalized, ...prev.filter(v => String(v.id) !== String(normalized.id))]);
+          setVehicles(prev => {
+            const filtered = prev.filter(v => String(v.id) !== String(normalized.id));
+            const updated = [normalized, ...filtered];
+            updated.sort((a, b) => {
+              const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+              if (timeDiff !== 0) return timeDiff;
+              return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+            });
+            return updated;
+          });
         }
         if (typeof addGarageVehicle === 'function') {
           addGarageVehicle(newVehicle);

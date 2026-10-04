@@ -107,7 +107,16 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
         (payload) => {
           if (payload?.new) {
             const newCar = normalizeServerVehicle(payload.new as RawVehicle);
-            setVehicles((prev) => [newCar, ...prev.filter(v => String(v.id) !== String(newCar.id))]);
+            setVehicles((prev) => {
+              const filtered = prev.filter(v => String(v.id) !== String(newCar.id));
+              const updated = [newCar, ...filtered];
+              updated.sort((a, b) => {
+                const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                if (timeDiff !== 0) return timeDiff;
+                return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+              });
+              return updated;
+            });
           }
         }
       )
@@ -164,7 +173,7 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
     }
   };
 
-  // Filtered cars computed instantly on client & sorted newest first
+  // Filtered cars computed instantly on client & sorted newest first deterministically
   const filteredFleet = vehicles
     .filter(v => {
       const matchesSearch = !search.trim() || 
@@ -182,7 +191,11 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
 
       return matchesSearch && matchesMake && matchesModel && matchesYear && matchesZone && matchesCategory && matchesMinPrice && matchesMaxPrice;
     })
-    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    .sort((a, b) => {
+      const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+    });
 
   const categories = [
     { id: 'all', label: 'All', icon: Car },
