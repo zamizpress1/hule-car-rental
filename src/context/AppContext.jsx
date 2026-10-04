@@ -154,10 +154,19 @@ export const AppProvider = ({ children }) => {
 
       if (data) {
         const activeRows = data.map(normalizeVehicle);
-        setVehicles(activeRows);
-        try {
-          localStorage.setItem('cached_active_vehicles', JSON.stringify(activeRows));
-        } catch {}
+        setVehicles(prev => {
+          // Preserve optimistic vehicles added recently (< 2 min) that might not yet be returned by Supabase
+          const incomingIds = new Set(activeRows.map(r => String(r.id)));
+          const recentOptimistic = prev.filter(p => 
+            !incomingIds.has(String(p.id)) && 
+            (Date.now() - new Date(p.created_at || Date.now()).getTime() < 120000)
+          );
+          const merged = [...recentOptimistic, ...activeRows];
+          try {
+            localStorage.setItem('cached_active_vehicles', JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
         return { data: activeRows };
       }
       return { data: [] };
@@ -414,13 +423,17 @@ export const AppProvider = ({ children }) => {
 
   const addGarageVehicle = (vehicleData) => {
     const normalized = normalizeVehicle(vehicleData);
-    setMyGarage(prev => [normalized, ...prev]);
-    // Instantly add to active public vehicles feed so it appears immediately without manual review
+    setMyGarage(prev => [normalized, ...prev.filter(v => String(v.id) !== String(normalized.id))]);
+    // Instantly prepend to active public vehicles feed so it appears immediately at the top without manual reload
     setVehicles(prev => {
-      const exists = prev.some(v => String(v.id) === String(normalized.id));
-      return exists ? prev : [normalized, ...prev];
+      const filtered = prev.filter(v => String(v.id) !== String(normalized.id));
+      const updated = [normalized, ...filtered];
+      try {
+        localStorage.setItem('cached_active_vehicles', JSON.stringify(updated));
+      } catch {}
+      return updated;
     });
-    fetchActiveVehiclesFromSupabase();
+    fetchActiveVehiclesFromSupabase(16);
     showToast('Your car is now live on the public feed!');
   };
 

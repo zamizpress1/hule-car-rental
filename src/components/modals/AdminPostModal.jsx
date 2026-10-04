@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { X, ShieldCheck, Loader2 } from 'lucide-react';
 import { compressImage } from '../../utils/imageUtils';
-import { useApp } from '../../context/AppContext';
+import { useApp, normalizeVehicle } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 
 export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
-  const { user, showToast } = useApp();
+  const { user, showToast, addGarageVehicle, setVehicles, refetchVehicles } = useApp();
   
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -102,9 +102,20 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
 
     let uploadedUrls = [];
     try {
-      uploadedUrls = await Promise.all(
+      const compressedFiles = await Promise.all(
         selectedFiles.map(async (file) => {
-          const fileExt = file.name.split('.').pop();
+          try {
+            return await compressImage(file, 1200, 0.75);
+          } catch (cErr) {
+            console.warn('Compression fallback to raw file:', cErr);
+            return file;
+          }
+        })
+      );
+
+      uploadedUrls = await Promise.all(
+        compressedFiles.map(async (file) => {
+          const fileExt = file.name.split('.').pop() || 'jpg';
           const safeFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
           const filePath = `${user?.id || 'admin'}/${safeFileName}`;
 
@@ -161,14 +172,26 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
     };
 
     try {
-      const { error } = await supabase
+      const { data: insertedData, error } = await supabase
         .from('vehicles')
-        .insert([vehicleRecord]);
+        .insert([vehicleRecord])
+        .select();
 
       if (error) {
         console.error('Insert error details:', error);
         showToast('Error publishing premium vehicle');
       } else {
+        const newVehicle = (insertedData && insertedData[0]) ? insertedData[0] : vehicleRecord;
+        const normalized = normalizeVehicle(newVehicle);
+        if (typeof setVehicles === 'function') {
+          setVehicles(prev => [normalized, ...prev.filter(v => String(v.id) !== String(normalized.id))]);
+        }
+        if (typeof addGarageVehicle === 'function') {
+          addGarageVehicle(newVehicle);
+        }
+        if (typeof refetchVehicles === 'function') {
+          refetchVehicles(16);
+        }
         showToast('Premium vehicle published');
         setFormData({
           make: '',

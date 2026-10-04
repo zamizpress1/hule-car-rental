@@ -110,9 +110,20 @@ export const EditVehicleModal = ({ isOpen, vehicle, onClose, onSuccess }) => {
 
     if (selectedFiles.length > 0) {
       try {
-        const newUrls = await Promise.all(
+        const compressedFiles = await Promise.all(
           selectedFiles.map(async (file) => {
-            const fileExt = file.name.split('.').pop();
+            try {
+              return await compressImage(file, 1200, 0.75);
+            } catch (cErr) {
+              console.warn('Compression fallback to raw file:', cErr);
+              return file;
+            }
+          })
+        );
+
+        const newUrls = await Promise.all(
+          compressedFiles.map(async (file) => {
+            const fileExt = file.name.split('.').pop() || 'jpg';
             const safeFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
             const filePath = `${vehicle.owner_id || 'update'}/${safeFileName}`;
 

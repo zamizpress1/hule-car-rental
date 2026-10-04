@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ShieldCheck, Loader2, X, ArrowLeft, Check, ChevronRight, ChevronLeft, Car, DollarSign, Image, Phone } from 'lucide-react';
 import { compressImage } from '../utils/imageUtils';
 import { hasForbiddenContact } from '../utils/textFilters';
-import { useApp } from '../context/AppContext';
+import { useApp, normalizeVehicle } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase, supabaseAdmin } from '../lib/supabase';
 
@@ -12,7 +12,7 @@ export const OwnerWizardPage = () => {
   const location = useLocation();
   const isAdminPost = location.state?.isAdminPost || false;
   
-  const { user, addGarageVehicle, showToast } = useApp();
+  const { user, addGarageVehicle, showToast, setVehicles, setFilters, refetchVehicles } = useApp();
   const { language, t } = useLanguage();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -217,11 +217,12 @@ export const OwnerWizardPage = () => {
         throw new Error('Please select at least 1 vehicle photo to upload.');
       }
 
-      // 1. Client-side compression BEFORE uploading to Supabase Storage
+      // 1. Client-side compression BEFORE uploading to Supabase Storage (1200px max width at 75% quality)
+      setSubmitStage('compressing');
       const compressedFiles = await Promise.all(
         selectedFiles.map(async (file) => {
           try {
-            return await compressImage(file, 1200, 0.8);
+            return await compressImage(file, 1200, 0.75);
           } catch (cErr) {
             console.warn('Compression fallback to raw file:', cErr);
             return file;
@@ -331,7 +332,25 @@ export const OwnerWizardPage = () => {
         console.warn('Database insert notice:', insertErr);
       }
 
+      // Step 2: Instant Feed Refresh & Optimistic UI
+      // Prepend the new car directly into the global vehicles state so it appears at the top instantly
+      const normalizedNewCar = normalizeVehicle(insertedVehicle);
+      if (typeof setVehicles === 'function') {
+        setVehicles(prev => [normalizedNewCar, ...prev.filter(v => String(v.id) !== String(normalizedNewCar.id))]);
+      }
+      try {
+        const cached = localStorage.getItem('cached_active_vehicles');
+        const list = cached ? JSON.parse(cached) : [];
+        localStorage.setItem('cached_active_vehicles', JSON.stringify([normalizedNewCar, ...list.filter(v => String(v.id) !== String(normalizedNewCar.id))]));
+      } catch {}
+
       addGarageVehicle(insertedVehicle);
+      if (typeof setFilters === 'function') {
+        setFilters({ search: '', zone: 'all', category: 'all', driverMode: 'all', make: '', model: '', year: '' });
+      }
+      if (typeof refetchVehicles === 'function') {
+        refetchVehicles(16);
+      }
       showToast('Your car is now live on the public feed!');
       navigate('/');
     } catch (error) {
