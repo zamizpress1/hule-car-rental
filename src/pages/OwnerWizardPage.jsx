@@ -235,14 +235,10 @@ export const OwnerWizardPage = () => {
 
       const uploadedUrls = await Promise.all(
         compressedFiles.map(async (file) => {
-          // If no active user session, bypass remote storage HTTP requests to prevent 403 RLS policy errors
-          if (!user?.id) {
-            return await fileToDataUrl(file);
-          }
-
           try {
-            const fileExt = file.name.split('.').pop() || 'jpg';
-            const safeFileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+            const fileExt = (file.name || 'image.jpg').split('.').pop() || 'jpg';
+            const folder = user?.id || 'public';
+            const safeFileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
 
             const { error: uploadErr } = await dbClient.storage
               .from('vehicle_images')
@@ -261,7 +257,8 @@ export const OwnerWizardPage = () => {
             console.warn('Storage upload exception:', err);
           }
 
-          return await fileToDataUrl(file);
+          // Fallback to safe default photo URL if upload fails to prevent multi-megabyte base64 string bloat
+          return 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop';
         })
       );
 

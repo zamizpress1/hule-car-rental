@@ -86,14 +86,27 @@ export const AppProvider = ({ children }) => {
   const { user } = useAuth();
   const vehiclesAbortControllerRef = useRef(null);
   const [savedIds, setSavedIds] = useState(new Set());
-  // Clean up any legacy localStorage cache on startup and start with fresh empty array
+  // Stale-while-revalidate: initialize vehicles immediately from localStorage / sessionStorage to eliminate delay and 0-flash
   const [vehicles, setVehicles] = useState(() => {
     try {
-      localStorage.removeItem('cached_active_vehicles');
+      const cached = localStorage.getItem('hule_active_vehicles') || sessionStorage.getItem('hule_active_vehicles');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {}
     return [];
   });
-  const [loadingVehicles, setLoadingVehicles] = useState(true);
+  const [loadingVehicles, setLoadingVehicles] = useState(() => {
+    try {
+      const cached = localStorage.getItem('hule_active_vehicles') || sessionStorage.getItem('hule_active_vehicles');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return false;
+      }
+    } catch {}
+    return true;
+  });
   const [pendingVehicles, setPendingVehicles] = useState([]);
   const [myGarage, setMyGarage] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -129,8 +142,7 @@ export const AppProvider = ({ children }) => {
     vehiclesAbortControllerRef.current = controller;
 
     setLoadingVehicles(true);
-    // Enforce strict loading state: clear React state before fetch completes so old fleet is never rendered
-    setVehicles([]);
+    // Do NOT wipe vehicles to [] on refetch to prevent flashing 0 in the UI
 
     try {
       // Force fresh data on every fetch with cache-busting headers and deterministic ordering
@@ -189,44 +201,23 @@ export const AppProvider = ({ children }) => {
         return { data: [] };
       }
 
-      console.log(`Fetched Active Vehicles (limit ${limit}):`, data);
-
       if (data) {
-        // Extract unique owner IDs and safely lookup profiles without risking query crashes
-        const ownerIds = [...new Set(data.map(v => v.owner_id).filter(Boolean))];
-        let profilesMap = {};
-
-        if (ownerIds.length > 0) {
-          try {
-            const { data: profilesData } = await supabase
-              .from('profiles')
-              .select('id, phone, phone_number, full_name')
-              .in('id', ownerIds);
-
-            if (profilesData && Array.isArray(profilesData)) {
-              profilesData.forEach(p => {
-                if (p && p.id) {
-                  profilesMap[String(p.id)] = p;
-                }
-              });
-            }
-          } catch (profileErr) {
-            console.warn('Profiles lookup notice (continuing without profiles):', profileErr);
-          }
-        }
-
         const activeRows = data
           .filter(row => !row.status || String(row.status).toLowerCase() === 'active')
-          .map(row => {
-            const profileMatch = row.owner_id ? profilesMap[String(row.owner_id)] : null;
-            return normalizeVehicle(row, profileMatch);
-          });
+          .map(row => normalizeVehicle(row));
+
         // Strictly enforce deterministic sorting: created_at DESC, id DESC
         activeRows.sort((a, b) => {
           const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
           if (timeDiff !== 0) return timeDiff;
           return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
         });
+
+        // Cache in localStorage and sessionStorage for instant 0ms load on next visit/refresh
+        try {
+          localStorage.setItem('hule_active_vehicles', JSON.stringify(activeRows));
+          sessionStorage.setItem('hule_active_vehicles', JSON.stringify(activeRows));
+        } catch {}
 
         setVehicles(prev => {
           // Only preserve genuine pending optimistic additions created in the last 60 seconds
@@ -246,6 +237,30 @@ export const AppProvider = ({ children }) => {
 
           return merged;
         });
+
+        // Non-blocking background enhancement: if any vehicle has an owner_id without phone, fetch profiles asynchronously
+        const missingPhoneOwnerIds = [...new Set(data.filter(v => v.owner_id && !v.owner_phone).map(v => v.owner_id))];
+        if (missingPhoneOwnerIds.length > 0) {
+          supabase
+            .from('profiles')
+            .select('id, phone, phone_number, full_name')
+            .in('id', missingPhoneOwnerIds)
+            .then(({ data: profilesData }) => {
+              if (profilesData && Array.isArray(profilesData) && profilesData.length > 0) {
+                const profilesMap = {};
+                profilesData.forEach(p => {
+                  if (p && p.id) profilesMap[String(p.id)] = p;
+                });
+                setVehicles(current => current.map(item => {
+                  const match = item.owner_id ? profilesMap[String(item.owner_id)] : null;
+                  if (!match) return item;
+                  return normalizeVehicle(item, match);
+                }));
+              }
+            })
+            .catch(() => {});
+        }
+
         return { data: activeRows };
       }
       return { data: [] };
@@ -469,10 +484,11 @@ export const AppProvider = ({ children }) => {
   }, [user?.id]);
 
   useEffect(() => {
+    fetchActiveVehiclesFromSupabase(100);
     fetchPendingVehiclesFromSupabase();
     fetchBookingsFromSupabase();
     fetchUsersFromSupabase();
-  }, []);
+  }, [fetchActiveVehiclesFromSupabase]);
 
   const showToast = (msg) => {
     setToast({ visible: true, message: msg });

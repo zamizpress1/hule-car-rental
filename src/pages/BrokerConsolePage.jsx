@@ -38,6 +38,7 @@ export const BrokerConsolePage = () => {
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const {
     vehicles = [],
+    loadingVehicles = false,
     pendingVehicles = [],
     bookings = [],
     usersList = [],
@@ -68,6 +69,15 @@ export const BrokerConsolePage = () => {
   };
 
   const [realUsers, setRealUsers] = useState([]);
+  const [hasCompletedFetch, setHasCompletedFetch] = useState(() => (Array.isArray(vehicles) && vehicles.length > 0));
+
+  useEffect(() => {
+    if (!loadingVehicles || (Array.isArray(vehicles) && vehicles.length > 0)) {
+      setHasCompletedFetch(true);
+    }
+  }, [loadingVehicles, vehicles]);
+
+  const isFleetLoading = (loadingVehicles && (!vehicles || vehicles.length === 0)) || (!hasCompletedFetch && (!vehicles || vehicles.length === 0));
 
   useEffect(() => {
     const fetchRealUsers = async () => {
@@ -152,13 +162,7 @@ export const BrokerConsolePage = () => {
            '';
   };
 
-  // Automatically fetch active vehicles on mount and when active_fleet tab is active
-  useEffect(() => {
-    if (typeof refetchVehicles === 'function') {
-      refetchVehicles(100);
-    }
-  }, [refetchVehicles]);
-
+  // Automatically fetch active vehicles when active_fleet tab is viewed (single clean trigger)
   useEffect(() => {
     if (activeTab === 'active_fleet' && typeof refetchVehicles === 'function') {
       refetchVehicles(100);
@@ -614,10 +618,10 @@ export const BrokerConsolePage = () => {
                   <PlusCircle className="w-3.5 h-3.5" /> Add Premium Post (+)
                 </button>
                 <button
-                  onClick={refetchVehicles}
+                  onClick={() => refetchVehicles(100)}
                   className="bg-white border border-border text-xs font-bold px-3 py-1 rounded-full shadow-xs flex items-center gap-1 hover:bg-slate-50 text-content"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingVehicles ? 'animate-spin' : ''}`} /> Refresh
                 </button>
               </div>
             </div>
@@ -626,12 +630,24 @@ export const BrokerConsolePage = () => {
             <div className="flex items-center gap-6 bg-white border border-border rounded-2xl p-4 shadow-sm">
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase font-bold text-muted tracking-wider">Total Fleet</span>
-                <span className="text-xl font-black text-content">{vehicles?.length || 0}</span>
+                <span className="text-xl font-black text-content">
+                  {isFleetLoading ? (
+                    <span className="inline-block w-8 h-6 bg-slate-200 animate-pulse rounded mt-0.5" />
+                  ) : (
+                    vehicles?.length || 0
+                  )}
+                </span>
               </div>
               <div className="w-px h-10 bg-border"></div>
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase font-bold text-muted tracking-wider">Recently Added (24h)</span>
-                <span className="text-xl font-black text-brand">{recentlyAdded24hCount}</span>
+                <span className="text-xl font-black text-brand">
+                  {isFleetLoading ? (
+                    <span className="inline-block w-8 h-6 bg-amber-100 animate-pulse rounded mt-0.5" />
+                  ) : (
+                    recentlyAdded24hCount
+                  )}
+                </span>
               </div>
             </div>
 
@@ -650,11 +666,44 @@ export const BrokerConsolePage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {vehicles?.map((v, index) => {
-                      const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
-                      const contactPhone = getVehicleContactPhone(v);
-                      return (
-                        <tr key={v?.id} className={`group hover:bg-slate-50 transition-colors ${rowBg}`}>
+                    {isFleetLoading ? (
+                      Array.from({ length: 6 }).map((_, idx) => (
+                        <tr key={`fleet-skeleton-${idx}`} className="animate-pulse bg-white">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-lg bg-slate-200 shrink-0" />
+                              <div className="space-y-1.5">
+                                <div className="w-28 h-4 bg-slate-200 rounded" />
+                                <div className="w-16 h-3 bg-slate-100 rounded" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="space-y-1.5">
+                              <div className="w-20 h-4 bg-slate-200 rounded-full" />
+                              <div className="w-16 h-3 bg-slate-100 rounded" />
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="w-24 h-4 bg-slate-200 rounded" />
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="w-16 h-5 bg-slate-200 rounded-md" />
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="w-20 h-4 bg-slate-200 rounded" />
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="w-24 h-7 bg-slate-200 rounded-md mx-auto" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : vehicles && vehicles.length > 0 ? (
+                      vehicles.map((v, index) => {
+                        const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
+                        const contactPhone = getVehicleContactPhone(v);
+                        return (
+                          <tr key={v?.id} className={`group hover:bg-slate-50 transition-colors ${rowBg}`}>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 rounded-lg overflow-hidden bg-background shrink-0 border border-border relative">
@@ -782,14 +831,14 @@ export const BrokerConsolePage = () => {
                           </td>
                         </tr>
                       );
-                    })}
-                    {(!vehicles || vehicles.length === 0) && (
-                      <tr>
-                        <td colSpan="6" className="py-8 text-center text-muted text-sm font-medium">
-                          No vehicles found in the active fleet.
-                        </td>
-                      </tr>
-                    )}
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="py-8 text-center text-muted text-sm font-medium">
+                        No vehicles found in the active fleet.
+                      </td>
+                    </tr>
+                  )}
                   </tbody>
                 </table>
               </div>
