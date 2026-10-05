@@ -68,39 +68,56 @@ export const MarketplacePage = () => {
   const fetchPremiumVehicles = useCallback(async () => {
     setLoadingPremium(true);
     try {
-      // Calculate 10 days ago ISO string (start of UTC day avoids clipping listings on the 10th day)
-      const tenDaysAgoDate = new Date();
-      tenDaysAgoDate.setUTCDate(tenDaysAgoDate.getUTCDate() - 10);
-      tenDaysAgoDate.setUTCHours(0, 0, 0, 0);
-      const tenDaysAgo = tenDaysAgoDate.toISOString();
+      // Calculate 30 days ago ISO string (widened window so valid inventory is never hidden)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Based on Supabase vehicles table schema, column is 'is_premium'
-      let query = supabase
-        .from('vehicles')
-        .select('*')
-        .eq('is_premium', true)
-        .or('status.eq.active,status.is.null')
-        .gte('created_at', tenDaysAgo)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-        .setHeader('Pragma', 'no-cache');
+      let data = null;
+      let error = null;
 
-      let { data, error } = await query;
+      // Check which column database uses (is_premium vs is_featured). Query for both or match active schema
+      try {
+        const dualQuery = await supabase
+          .from('vehicles')
+          .select('id, make, model, year, daily_rate, image_url, status, created_at, is_premium, is_featured, images, urgency_tag, advanced_payment_days, advance_payment, usage_type, poster_role')
+          .or('is_premium.eq.true,is_featured.eq.true')
+          .eq('status', 'active')
+          .gte('created_at', thirtyDaysAgo)
+          .order('created_at', { ascending: false })
+          .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+          .setHeader('Pragma', 'no-cache');
 
-      if (error) {
-        console.warn('Supabase premium vehicles fetch notice:', error.message);
+        data = dualQuery.data;
+        error = dualQuery.error;
+      } catch (e) {
+        error = e;
       }
 
-      // If no listings in the last 10 days, fallback to all active premium vehicles so valid listings are never filtered out
-      if (!data || data.length === 0) {
+      // If is_featured column does not exist in schema, match active schema (is_premium)
+      if (error || !data) {
+        const schemaQuery = await supabase
+          .from('vehicles')
+          .select('*')
+          .eq('is_premium', true)
+          .eq('status', 'active')
+          .gte('created_at', thirtyDaysAgo)
+          .order('created_at', { ascending: false })
+          .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+          .setHeader('Pragma', 'no-cache');
+
+        data = schemaQuery.data;
+        if (schemaQuery.error) {
+          console.warn('Supabase premium vehicles fetch notice:', schemaQuery.error.message);
+        }
+      }
+
+      // If fewer than 3 premium cars exist, remove strict cutoff so valid inventory is never completely hidden
+      if (!data || data.length < 3) {
         const fallbackRes = await supabase
           .from('vehicles')
           .select('*')
           .eq('is_premium', true)
-          .or('status.eq.active,status.is.null')
-          .order('created_at', { ascending: false })
-          .order('id', { ascending: false });
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
 
         if (fallbackRes.data && fallbackRes.data.length > 0) {
           data = fallbackRes.data;
@@ -108,11 +125,18 @@ export const MarketplacePage = () => {
       }
 
       if (data) {
-        // Check status = 'active' without case sensitivity, and verify is_premium || is_featured || featured
+        // Ensure status = 'active' and verify is_premium || is_featured
         const validPremium = data
           .filter(row => !row.status || String(row.status).toLowerCase() === 'active')
           .filter(row => row.is_premium === true || row.is_featured === true || row.featured === true)
-          .map(normalizeVehicle);
+          .map(row => {
+            const normalized = normalizeVehicle(row);
+            return {
+              ...normalized,
+              is_premium: Boolean(row.is_premium || row.is_featured || row.featured),
+              is_featured: Boolean(row.is_featured || row.is_premium || row.featured)
+            };
+          });
 
         validPremium.sort((a, b) => {
           const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
@@ -359,7 +383,7 @@ export const MarketplacePage = () => {
             {t.premiumPosts || 'Premium posts'}
           </h2>
           <span className="text-[10px] sm:text-xs text-slate-500">
-            Published in the last 10 days
+            Published in the last 30 days
           </span>
         </div>
 
