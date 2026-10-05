@@ -987,3 +987,5 @@ export const BrokerConsolePage = () => {
     </div>
   );
 };
+
+export default BrokerConsolePage;

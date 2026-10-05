@@ -3,3 +3,7 @@
 .env.production
 node_modules
 dist
+
+.next
+.next/
+

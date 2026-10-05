@@ -163,3 +163,5 @@ export const UserProfilePage = () => {
     </section>
   );
 };
+
+export default UserProfilePage;

@@ -334,3 +334,5 @@ export const ProductDetailPage = () => {
     </section>
   );
 };
+
+export default ProductDetailPage;

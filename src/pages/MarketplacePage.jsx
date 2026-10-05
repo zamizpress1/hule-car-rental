@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Sparkles, Search, SlidersHorizontal, X, ShieldCheck, Heart, MapPin, Car, Gauge, Mountain, Gem, Bus, UserCheck, ChevronRight, Phone, Send, Loader2, Percent } from 'lucide-react';
 import { useApp, normalizeVehicle } from '../context/AppContext';
@@ -60,29 +60,130 @@ export const MarketplacePage = () => {
   // Enforce strict loading state: While initial network request is pending, render Skeleton loader
   const loading = Boolean(loadingVehicles);
 
-  // Supabase Realtime Subscription (Instant Live Updates)
+  // Dedicated isolated state for Premium posts
+  const [premiumVehicles, setPremiumVehicles] = useState([]);
+  const [loadingPremium, setLoadingPremium] = useState(true);
+
+  // Dedicated query fetching active premium vehicles from Supabase
+  const fetchPremiumVehicles = useCallback(async () => {
+    setLoadingPremium(true);
+    try {
+      // Calculate 10 days ago ISO string (start of UTC day avoids clipping listings on the 10th day)
+      const tenDaysAgoDate = new Date();
+      tenDaysAgoDate.setUTCDate(tenDaysAgoDate.getUTCDate() - 10);
+      tenDaysAgoDate.setUTCHours(0, 0, 0, 0);
+      const tenDaysAgo = tenDaysAgoDate.toISOString();
+
+      // Based on Supabase vehicles table schema, column is 'is_premium'
+      let query = supabase
+        .from('vehicles')
+        .select('*')
+        .eq('is_premium', true)
+        .or('status.eq.active,status.is.null')
+        .gte('created_at', tenDaysAgo)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .setHeader('Pragma', 'no-cache');
+
+      let { data, error } = await query;
+
+      if (error) {
+        console.warn('Supabase premium vehicles fetch notice:', error.message);
+      }
+
+      // If no listings in the last 10 days, fallback to all active premium vehicles so valid listings are never filtered out
+      if (!data || data.length === 0) {
+        const fallbackRes = await supabase
+          .from('vehicles')
+          .select('*')
+          .eq('is_premium', true)
+          .or('status.eq.active,status.is.null')
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false });
+
+        if (fallbackRes.data && fallbackRes.data.length > 0) {
+          data = fallbackRes.data;
+        }
+      }
+
+      if (data) {
+        // Check status = 'active' without case sensitivity, and verify is_premium || is_featured || featured
+        const validPremium = data
+          .filter(row => !row.status || String(row.status).toLowerCase() === 'active')
+          .filter(row => row.is_premium === true || row.is_featured === true || row.featured === true)
+          .map(normalizeVehicle);
+
+        validPremium.sort((a, b) => {
+          const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+          if (timeDiff !== 0) return timeDiff;
+          return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+        });
+
+        setPremiumVehicles(validPremium);
+      } else {
+        setPremiumVehicles([]);
+      }
+    } catch (err) {
+      console.error('Error fetching premium vehicles:', err);
+      setPremiumVehicles([]);
+    } finally {
+      setLoadingPremium(false);
+    }
+  }, []);
+
   useEffect(() => {
-    // Realtime listener for new listings
+    fetchPremiumVehicles();
+  }, [fetchPremiumVehicles]);
+
+  // Supabase Realtime Subscription (Instant Live Updates with isolated state management)
+  useEffect(() => {
     const channel = supabase
       .channel('realtime:vehicles')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'vehicles' },
+        { event: '*', schema: 'public', table: 'vehicles' },
         (payload) => {
-          // Prepend the brand new car to the top of the feed immediately
+          if (payload.eventType === 'DELETE' && payload.old?.id) {
+            setPremiumVehicles(prev => prev.filter(v => String(v.id) !== String(payload.old.id)));
+            setVehicles(prev => prev.filter(v => String(v.id) !== String(payload.old.id)));
+            return;
+          }
+
           if (payload?.new) {
             const newCar = normalizeVehicle(payload.new);
-            setVehicles((prev) => {
-              const filtered = prev.filter(v => String(v.id) !== String(newCar.id));
-              const updated = [newCar, ...filtered];
-              // Strictly enforce deterministic sorting: created_at DESC, id DESC
-              updated.sort((a, b) => {
-                const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-                if (timeDiff !== 0) return timeDiff;
-                return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+            const isPrem = Boolean(newCar.is_premium || newCar.is_featured || newCar.featured);
+            const isActive = !newCar.status || String(newCar.status).toLowerCase() === 'active';
+
+            if (isPrem && isActive) {
+              setPremiumVehicles((prev) => {
+                const filtered = prev.filter(v => String(v.id) !== String(newCar.id));
+                const updated = [newCar, ...filtered];
+                updated.sort((a, b) => {
+                  const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                  if (timeDiff !== 0) return timeDiff;
+                  return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+                });
+                return updated;
               });
-              return updated;
-            });
+              // Ensure fleet query and premium query do not duplicate or mutate each other
+              setVehicles(prev => prev.filter(v => String(v.id) !== String(newCar.id)));
+            } else if (!isPrem && isActive) {
+              setVehicles((prev) => {
+                const filtered = prev.filter(v => String(v.id) !== String(newCar.id));
+                const updated = [newCar, ...filtered];
+                updated.sort((a, b) => {
+                  const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                  if (timeDiff !== 0) return timeDiff;
+                  return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+                });
+                return updated;
+              });
+              setPremiumVehicles(prev => prev.filter(v => String(v.id) !== String(newCar.id)));
+            } else {
+              setPremiumVehicles(prev => prev.filter(v => String(v.id) !== String(newCar.id)));
+              setVehicles(prev => prev.filter(v => String(v.id) !== String(newCar.id)));
+            }
           }
         }
       )
@@ -208,13 +309,7 @@ export const MarketplacePage = () => {
     return searchMatch && makeMatch && modelMatch && yearMatch && zoneMatch && categoryMatch && driverMatch && priceMatch;
   });
 
-  const premiumVehicles = filteredVehicles
-    .filter(v => v.is_premium === true)
-    .sort((a, b) => {
-      const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-      if (timeDiff !== 0) return timeDiff;
-      return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
-    });
+
 
   const filteredFleet = filteredVehicles
     .filter(v => v.is_premium !== true)
@@ -270,7 +365,7 @@ export const MarketplacePage = () => {
 
         {/* The Container */}
         <div className="flex overflow-x-auto gap-4 snap-x hide-scrollbar pb-2">
-          {loading ? (
+          {loadingPremium ? (
             [...Array(4)].map((_, i) => (
               <div key={i} className="shrink-0 w-[45%] sm:w-[220px] md:w-[280px] snap-center">
                 <CarSkeletonCard />
@@ -672,3 +767,5 @@ export const MarketplacePage = () => {
     </section>
   );
 };
+
+export default MarketplacePage;

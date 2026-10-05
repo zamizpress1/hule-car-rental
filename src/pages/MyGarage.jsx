@@ -188,3 +188,5 @@ export const MyGarage = () => {
     </div>
   );
 };
+
+export default MyGarage;

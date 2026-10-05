@@ -922,3 +922,5 @@ export const OwnerWizardPage = () => {
     </section>
   );
 };
+
+export default OwnerWizardPage;

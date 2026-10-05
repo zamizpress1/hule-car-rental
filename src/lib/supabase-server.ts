@@ -19,7 +19,7 @@ export const createServerSupabaseClient = () => {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache'
       },
-      fetch: (url, options = {}) => {
+      fetch: (url: any, options: any = {}) => {
         const headers = new Headers(options.headers || {});
         headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
         headers.set('Pragma', 'no-cache');
@@ -99,7 +99,7 @@ export const normalizeServerVehicle = (row: RawVehicle) => ({
   poster_role: row.poster_role || 'Private Owner',
   owner_phone: row.owner_phone || '',
   status: row.status || 'active',
-  is_premium: Boolean(row.is_premium),
+  is_premium: Boolean(row.is_premium || (row as any).is_featured || (row as any).featured),
   requires_check: Boolean(row.requires_check),
   deposit_amount: Number(row.deposit_amount || 0),
   advanced_payment_days: Number(row.advanced_payment_days || 0),
@@ -108,8 +108,8 @@ export const normalizeServerVehicle = (row: RawVehicle) => ({
     : { name: 'Verified Partner', phone: '0930175564' },
   collateral: row.collateral || ['Kebele ID', 'Deposit'],
   description: row.description || 'Well-maintained vehicle in excellent condition. Ideal for city driving or long-distance rentals across Ethiopia.',
-  image: row.image || row.image_url || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
-  images: Array.isArray(row.images) && row.images.length > 0 ? row.images : [row.image_url || row.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'],
+  image: row.image_url || row.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
+  images: row.image_url ? [row.image_url] : [],
   created_at: row.created_at || new Date().toISOString()
 });
 
@@ -119,18 +119,15 @@ import { parseUrlFilters } from '../utils/urlFilters';
  * Fetch initial batch of cars directly on the server for instant Next.js streaming.
  * Strictly applies only valid filter keys and ignores all marketing tracking parameters.
  */
-export async function getInitialCars(limit: number = 16, customFilters?: any) {
+export async function getInitialCars(limit: number = 12, customFilters?: any) {
   try {
     const supabase = createServerSupabaseClient();
     let query = supabase
       .from('vehicles')
-      .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at')
+      .select('*')
       .or('status.eq.active,status.is.null')
       .order('created_at', { ascending: false })
-      .order('id', { ascending: false })
-      .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-      .setHeader('Pragma', 'no-cache')
-      .setHeader('X-Cache-Buster', String(Date.now()));
+      .order('id', { ascending: false });
 
     if (customFilters) {
       const safeFilters = parseUrlFilters(customFilters);

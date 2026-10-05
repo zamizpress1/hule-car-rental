@@ -33,7 +33,7 @@ export const normalizeVehicle = (row) => ({
   is_approved: row.is_approved !== undefined ? Boolean(row.is_approved) : true,
   verified: row.verified !== undefined ? Boolean(row.verified) : true,
   is_verified: row.is_verified !== undefined ? Boolean(row.is_verified) : true,
-  is_premium: Boolean(row.is_premium),
+  is_premium: Boolean(row.is_premium || row.is_featured || row.featured),
   requires_check: Boolean(row.requires_check),
   deposit_amount: Number(row.deposit_amount || 0),
   advanced_payment_days: Number(row.advanced_payment_days || 0),
@@ -133,7 +133,7 @@ export const AppProvider = ({ children }) => {
       // Force fresh data on every fetch with cache-busting headers and deterministic ordering
       let query = supabase
         .from('vehicles')
-        .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at')
+        .select('*')
         .or('status.eq.active,status.is.null')
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
@@ -440,7 +440,7 @@ export const AppProvider = ({ children }) => {
   }, [user?.id]);
 
   useEffect(() => {
-    fetchActiveVehiclesFromSupabase(16);
+    // fetchActiveVehiclesFromSupabase(16); // Removed to prevent double-fetching on client
     fetchPendingVehiclesFromSupabase();
     fetchBookingsFromSupabase();
     fetchUsersFromSupabase();

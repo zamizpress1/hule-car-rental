@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { Sparkles, Search, ShieldCheck, Heart, MapPin, Car, Gauge, Mountain, Gem, Bus, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { normalizeServerVehicle, RawVehicle } from '../lib/supabase-server';
@@ -41,6 +43,7 @@ export interface Vehicle {
   created_at: string;
   urgency_tag?: string;
   advance_days?: number;
+  advance_payment?: string;
 }
 
 interface CarListingClientProps {
@@ -337,7 +340,7 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
         {/* Grid of Car Cards */}
         {filteredFleet.length > 0 && (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-6 px-2 md:px-0">
-            {filteredFleet.map(v => {
+            {filteredFleet.map((v, index) => {
               const isSaved = savedIds.has(v.id);
               let rawAdv = Number(v.advanced_payment_days || v.advance_days || 0);
               if (!rawAdv && v.advance_payment) {
@@ -347,17 +350,19 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
               const calculatedMonths = rawAdv > 0 ? (rawAdv >= 30 ? Math.round(rawAdv / 30) : rawAdv) : 0;
 
               return (
-                <div
+                <Link
                   key={v.id}
-                  className="bg-white rounded-lg border border-slate-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden"
+                  href={`/vehicle/${v.id}`}
+                  className="bg-white rounded-lg border border-slate-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden block"
                 >
                   <div className="relative w-full aspect-[16/10] bg-slate-100 overflow-hidden">
-                    <img
+                    <Image
                       src={v.image || (v.images && v.images[0]) || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'}
                       alt={`${v.make} ${v.model}`}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      priority={index < 4}
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
 
                     {/* Verified Badge */}
@@ -410,7 +415,7 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
