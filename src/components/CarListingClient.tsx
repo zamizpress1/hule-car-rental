@@ -176,6 +176,8 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
   // Filtered cars computed instantly on client & sorted newest first deterministically
   const filteredFleet = vehicles
     .filter(v => {
+      const isStatusActive = !v.status || String(v.status).toLowerCase() === 'active';
+      if (!isStatusActive) return false;
       const matchesSearch = !search.trim() || 
         `${v.make} ${v.model} ${v.zone} ${v.category} ${v.description || ''}`.toLowerCase().includes(search.toLowerCase().trim());
       const matchesMake = !make.trim() ||

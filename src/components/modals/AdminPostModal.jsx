@@ -182,7 +182,13 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
         showToast('Error publishing premium vehicle');
       } else {
         const newVehicle = (insertedData && insertedData[0]) ? insertedData[0] : vehicleRecord;
-        const normalized = { ...normalizeVehicle(newVehicle), is_optimistic: true };
+        const normalized = {
+          ...normalizeVehicle(newVehicle),
+          status: 'active',
+          is_approved: true,
+          verified: true,
+          is_optimistic: true
+        };
         if (typeof setVehicles === 'function') {
           setVehicles(prev => {
             const filtered = prev.filter(v => String(v.id) !== String(normalized.id));

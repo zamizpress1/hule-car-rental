@@ -1,7 +1,28 @@
-import { supabase } from '../supabaseClient';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://mxruhvpilfehqxdhvbqk.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14cnVodnBpbGZlaHF4ZGh2YnFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NDU0ODAsImV4cCI6MjEwMjQyMTQ4MH0.yd8vZiiBe99HNOSYm1I2Wrl4CV3Zgj1utbHbmfGn6k8';
 
 export const createServerSupabaseClient = () => {
-  return supabase;
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    },
+    global: {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      },
+      fetch: (url, options = {}) => {
+        return fetch(url, {
+          ...options,
+          cache: 'no-store'
+        });
+      }
+    }
+  });
 };
 
 export interface RawVehicle {
@@ -95,7 +116,7 @@ export async function getInitialCars(limit: number = 16, customFilters?: any) {
     let query = supabase
       .from('vehicles')
       .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at')
-      .eq('status', 'active')
+      .or('status.eq.active,status.is.null')
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })
       .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
@@ -139,7 +160,9 @@ export async function getInitialCars(limit: number = 16, customFilters?: any) {
       return [];
     }
 
-    return (data || []).map(normalizeServerVehicle);
+    return (data || [])
+      .filter((row: any) => !row.status || String(row.status).toLowerCase() === 'active')
+      .map(normalizeServerVehicle);
   } catch (err) {
     console.error('Failed to stream initial cars on server:', err);
     return [];

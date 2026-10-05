@@ -2,7 +2,9 @@ import React, { Suspense } from 'react';
 import CarListStreamer from '../components/CarListStreamer';
 import CarSkeletonGrid from '../components/CarSkeletonGrid';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 0; // Dynamic server rendering for real-time car availability streaming
+export const fetchCache = 'force-no-store';
 
 /**
  * Main Car Listing Page - Pure async Server Component (Next.js App Router)

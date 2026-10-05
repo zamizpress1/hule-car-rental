@@ -178,7 +178,7 @@ export const MarketplacePage = () => {
     showToast(t('reset') || 'Filters reset');
   };
 
-  const activeVehicles = vehicles.filter(v => !v.status || v.status === 'active');
+  const activeVehicles = vehicles.filter(v => !v.status || String(v.status).toLowerCase() === 'active');
 
   const filteredVehicles = activeVehicles.filter(v => {
     if (viewMode === 'saved' && !savedIds.has(v.id)) return false;

@@ -29,7 +29,10 @@ export const normalizeVehicle = (row) => ({
   usage_type: row.usage_type || 'Personal Use',
   poster_role: row.poster_role || 'Private Owner',
   owner_phone: row.owner_phone || '',
-  status: row.status || 'active',
+  status: (row.status ? String(row.status).toLowerCase() : 'active'),
+  is_approved: row.is_approved !== undefined ? Boolean(row.is_approved) : true,
+  verified: row.verified !== undefined ? Boolean(row.verified) : true,
+  is_verified: row.is_verified !== undefined ? Boolean(row.is_verified) : true,
   is_premium: Boolean(row.is_premium),
   requires_check: Boolean(row.requires_check),
   deposit_amount: Number(row.deposit_amount || 0),
@@ -138,7 +141,7 @@ export const AppProvider = ({ children }) => {
       let query = supabase
         .from('vehicles')
         .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at')
-        .eq('status', 'active')
+        .or('status.eq.active,status.is.null')
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
@@ -192,7 +195,9 @@ export const AppProvider = ({ children }) => {
       console.log(`Fetched Active Vehicles (limit ${limit}):`, data);
 
       if (data) {
-        const activeRows = data.map(normalizeVehicle);
+        const activeRows = data
+          .filter(row => !row.status || String(row.status).toLowerCase() === 'active')
+          .map(normalizeVehicle);
         // Strictly enforce deterministic sorting: created_at DESC, id DESC
         activeRows.sort((a, b) => {
           const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();

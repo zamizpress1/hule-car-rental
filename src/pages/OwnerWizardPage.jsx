@@ -313,6 +313,9 @@ export const OwnerWizardPage = () => {
 
       let insertedVehicle = {
         id: `v-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        status: 'active',
+        is_approved: true,
+        verified: true,
         ...dbPayload
       };
 
@@ -326,7 +329,7 @@ export const OwnerWizardPage = () => {
         if (dbError) {
           console.warn('Supabase DB Insert notice:', dbError.message || dbError);
         } else if (insertedData) {
-          insertedVehicle = insertedData;
+          insertedVehicle = { ...insertedVehicle, ...insertedData };
         }
       } catch (insertErr) {
         console.warn('Database insert notice:', insertErr);
@@ -334,7 +337,13 @@ export const OwnerWizardPage = () => {
 
       // Step 2: Instant Feed Refresh & Optimistic UI
       // Prepend the new car directly into the global vehicles state so it appears at the top instantly
-      const normalizedNewCar = { ...normalizeVehicle(insertedVehicle), is_optimistic: true };
+      const normalizedNewCar = {
+        ...normalizeVehicle(insertedVehicle),
+        status: 'active',
+        is_approved: true,
+        verified: true,
+        is_optimistic: true
+      };
       if (typeof setVehicles === 'function') {
         setVehicles(prev => {
           const filtered = prev.filter(v => String(v.id) !== String(normalizedNewCar.id));

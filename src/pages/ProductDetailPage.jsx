@@ -51,7 +51,9 @@ export const ProductDetailPage = () => {
           .from('vehicles')
           .select('*')
           .eq('id', id)
-          .eq('status', 'active')
+          .or('status.eq.active,status.is.null')
+          .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+          .setHeader('Pragma', 'no-cache')
           .maybeSingle();
 
         if (error) {
