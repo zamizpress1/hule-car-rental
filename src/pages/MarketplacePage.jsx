@@ -73,7 +73,7 @@ export const MarketplacePage = () => {
         .from('vehicles')
         .select('id, make, model, year, daily_rate, image_url, status, zone, created_at, is_premium, usage_type, poster_role, advanced_payment_days, advance_payment, urgency_tag, description')
         .eq('is_premium', true)
-        .eq('status', 'active')
+        .or('status.eq.active,status.is.null')
         .order('created_at', { ascending: false })
         .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
         .setHeader('Pragma', 'no-cache');

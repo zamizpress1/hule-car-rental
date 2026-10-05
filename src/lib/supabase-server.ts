@@ -94,7 +94,7 @@ export const normalizeServerVehicle = (row: RawVehicle) => ({
   seats: row.seats || 5,
   usage_type: row.usage_type || 'Personal Use',
   poster_role: row.poster_role || 'Private Owner',
-  owner_phone: row.owner_phone || '',
+  owner_phone: row.owner_phone || (row as any).profiles?.phone_number || (row as any).profiles?.phone || (row as any).contact_phone || '',
   status: row.status || 'active',
   is_premium: row.is_premium === true,
   requires_check: Boolean(row.requires_check),
@@ -190,7 +190,7 @@ export async function getPremiumCars() {
       .from('vehicles')
       .select('id, make, model, year, daily_rate, image_url, status, zone, created_at, is_premium, usage_type, poster_role, advanced_payment_days, advance_payment, urgency_tag, description')
       .eq('is_premium', true)
-      .eq('status', 'active')
+      .or('status.eq.active,status.is.null')
       .order('created_at', { ascending: false });
 
     if (error) {

@@ -28,7 +28,7 @@ export const normalizeVehicle = (row) => ({
   seats: row.seats || 5,
   usage_type: row.usage_type || 'Personal Use',
   poster_role: row.poster_role || 'Private Owner',
-  owner_phone: row.owner_phone || '',
+  owner_phone: row.owner_phone || row.profiles?.phone_number || row.profiles?.phone || row.contact_phone || '',
   status: (row.status ? String(row.status).toLowerCase() : 'active'),
   is_approved: row.is_approved !== undefined ? Boolean(row.is_approved) : true,
   verified: row.verified !== undefined ? Boolean(row.verified) : true,
@@ -133,7 +133,7 @@ export const AppProvider = ({ children }) => {
       // Force fresh data on every fetch with cache-busting headers and deterministic ordering
       let query = supabase
         .from('vehicles')
-        .select('*')
+        .select('*, profiles:owner_id(phone, phone_number, full_name)')
         .or('status.eq.active,status.is.null')
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })

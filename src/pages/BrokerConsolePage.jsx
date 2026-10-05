@@ -146,14 +146,26 @@ export const BrokerConsolePage = () => {
     // Safe state access inside the realtime subscription
     const channel = supabase
       .channel('vehicles_realtime_dashboard')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'vehicles' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicles' }, (payload) => {
         if (typeof setVehicles === 'function') {
-          setVehicles(prev => {
-            const currentPrev = Array.isArray(prev) ? prev : [];
-            const exists = currentPrev.find(v => String(v.id) === String(payload.new.id));
-            if (exists) return currentPrev;
-            return [payload.new, ...currentPrev];
-          });
+          if (payload.eventType === 'INSERT') {
+            setVehicles(prev => {
+              const currentPrev = Array.isArray(prev) ? prev : [];
+              const exists = currentPrev.find(v => String(v.id) === String(payload.new.id));
+              if (exists) return currentPrev;
+              return [payload.new, ...currentPrev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setVehicles(prev => {
+              const currentPrev = Array.isArray(prev) ? prev : [];
+              return currentPrev.map(v => String(v.id) === String(payload.new.id) ? { ...v, ...payload.new } : v);
+            });
+          } else if (payload.eventType === 'DELETE') {
+            setVehicles(prev => {
+              const currentPrev = Array.isArray(prev) ? prev : [];
+              return currentPrev.filter(v => String(v.id) !== String(payload.old.id));
+            });
+          }
         }
       })
       .subscribe();
@@ -628,7 +640,14 @@ export const BrokerConsolePage = () => {
                                 )}
                               </div>
                               <div>
-                                <p className="font-extrabold text-content text-sm">{v?.make} {v?.model}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-extrabold text-content text-sm">{v?.make} {v?.model}</p>
+                                  {v?.is_premium === true && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                      ★ Promoted
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-[11px] text-muted font-semibold">{v?.year} • {v?.category}</p>
                               </div>
                             </div>
@@ -644,9 +663,9 @@ export const BrokerConsolePage = () => {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            {v?.owner_phone ? (
-                              <a href={`tel:${v.owner_phone}`} className="text-blue-600 font-bold hover:underline">
-                                {v.owner_phone}
+                            {(v?.owner_phone || v?.profiles?.phone_number || v?.profiles?.phone) ? (
+                              <a href={`tel:${v.owner_phone || v.profiles?.phone_number || v.profiles?.phone}`} className="text-blue-600 font-bold hover:underline">
+                                {v.owner_phone || v.profiles?.phone_number || v.profiles?.phone}
                               </a>
                             ) : (
                               <span className="text-slate-400 italic">No Number</span>
@@ -666,13 +685,26 @@ export const BrokerConsolePage = () => {
                               <button
                                 onClick={async () => {
                                   const nextVal = !v.is_premium;
-                                  const { error } = await supabase
-                                    .from('vehicles')
-                                    .update({ is_premium: nextVal })
-                                    .eq('id', v.id);
-                                  if (!error) {
-                                    showToast(nextVal ? 'Promoted to Premium' : 'Removed from Premium');
-                                    refetchVehicles();
+                                  // Optimistic state update: immediately toggle is_premium in local state
+                                  setVehicles(prev => (Array.isArray(prev) ? prev : []).map(item => String(item.id) === String(v.id) ? { ...item, is_premium: nextVal } : item));
+                                  try {
+                                    const { error } = await supabase
+                                      .from('vehicles')
+                                      .update({ is_premium: nextVal })
+                                      .eq('id', v.id);
+                                    if (error) {
+                                      console.error('Failed to update premium status:', error);
+                                      // Revert on failure
+                                      setVehicles(prev => (Array.isArray(prev) ? prev : []).map(item => String(item.id) === String(v.id) ? { ...item, is_premium: !nextVal } : item));
+                                      showToast(`Failed to update premium status: ${error.message}`);
+                                    } else {
+                                      showToast(nextVal ? 'Promoted to Premium' : 'Removed from Premium');
+                                      if (typeof refetchVehicles === 'function') refetchVehicles();
+                                    }
+                                  } catch (err) {
+                                    console.error('Error updating premium status:', err);
+                                    setVehicles(prev => (Array.isArray(prev) ? prev : []).map(item => String(item.id) === String(v.id) ? { ...item, is_premium: !nextVal } : item));
+                                    showToast('Network error while updating premium status');
                                   }
                                 }}
                                 className={`px-2 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${v.is_premium
@@ -683,17 +715,17 @@ export const BrokerConsolePage = () => {
                               >
                                 ★ {v.is_premium ? 'Premium' : 'Promote'}
                               </button>
-                              {v?.owner_phone ? (
+                              {(v?.owner_phone || v?.profiles?.phone_number || v?.profiles?.phone) ? (
                                 <>
                                   <a
-                                    href={`tel:${v.owner_phone}`}
+                                    href={`tel:${v.owner_phone || v.profiles?.phone_number || v.profiles?.phone}`}
                                     className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors"
                                     title="Call Owner"
                                   >
                                     <Phone className="w-4 h-4" />
                                   </a>
                                   <a
-                                    href={`https://wa.me/${v.owner_phone?.replace('+', '')}`}
+                                    href={`https://wa.me/${(v.owner_phone || v.profiles?.phone_number || v.profiles?.phone)?.replace(/[^0-9]/g, '')}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-8 h-8 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors"
