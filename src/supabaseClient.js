@@ -9,6 +9,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     headers: {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache'
+    },
+    fetch: (url, options = {}) => {
+      return fetch(url, {
+        ...options,
+        cache: 'no-store'
+      });
     }
   }
 });

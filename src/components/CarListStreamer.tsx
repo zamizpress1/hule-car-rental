@@ -1,11 +1,11 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 import React from 'react';
 import { getInitialCars } from '../lib/supabase-server';
 import CarListingClient from './CarListingClient';
 import { parseUrlFilters } from '../utils/urlFilters';
-
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'force-no-store';
 
 interface CarListStreamerProps {
   rawParams?: any;
