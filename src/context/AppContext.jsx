@@ -5,49 +5,52 @@ import { parseUrlFilters } from '../utils/urlFilters';
 
 const AppContext = createContext();
 
-export const normalizeVehicle = (row) => ({
-  ...row,
-  id: String(row.id),
-  owner_id: row.owner_id || null,
-  make: row.make || row.brand || '',
-  model: row.model || '',
-  year: row.year || new Date().getFullYear(),
-  category: row.category || 'Economy',
-  zone: row.zone || row.location || 'Bole',
-  dailyRate: Number(row.daily_rate || row.dailyRate || row.price || 0),
-  daily_rate: Number(row.daily_rate || row.dailyRate || row.price || 0),
-  driverMode: row.driver_mode || row.driverMode || 'Self-Drive',
-  driver_mode: row.driver_mode || row.driverMode || 'Self-Drive',
-  transmission: row.transmission || 'Auto',
-  fuel: row.fuel || row.fuel_type || 'Petrol',
-  body: row.body || row.body_type || 'Hatchback',
-  color: row.color || 'Silver',
-  cc: row.cc || row.engine || '1.3L',
-  mileage: row.mileage || '45,000 km',
-  condition: row.condition || 'Used in Ethiopia',
-  seats: row.seats || 5,
-  usage_type: row.usage_type || 'Personal Use',
-  poster_role: row.poster_role || 'Private Owner',
-  owner_phone: row.owner_phone || row.profiles?.phone_number || row.profiles?.phone || row.contact_phone || '',
-  status: (row.status ? String(row.status).toLowerCase() : 'active'),
-  is_approved: row.is_approved !== undefined ? Boolean(row.is_approved) : true,
-  verified: row.verified !== undefined ? Boolean(row.verified) : true,
-  is_verified: row.is_verified !== undefined ? Boolean(row.is_verified) : true,
-  is_premium: row.is_premium === true,
-  requires_check: Boolean(row.requires_check),
-  deposit_amount: Number(row.deposit_amount || 0),
-  advanced_payment_days: Number(row.advanced_payment_days || 0),
-  advance_payment: row.advance_payment || (row.advanced_payment_days ? `${row.advanced_payment_days} days` : ''),
-  supplier: typeof row.supplier === 'object' && row.supplier !== null 
-    ? { ...row.supplier, phone: '0930175564' } 
-    : { name: row.profiles?.full_name || row.supplier_name || row.supplier || 'Verified Partner', phone: '0930175564' },
-  collateral: row.collateral || ['Kebele ID', 'Deposit'],
-  description: row.description || 'Well-maintained vehicle in excellent condition. Ideal for city driving or long-distance rentals across Ethiopia.',
-  image: row.image || row.image_url || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
-  image_url: row.image_url || row.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
-  images: Array.isArray(row.images) && row.images.length > 0 ? row.images : [row.image_url || row.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'],
-  created_at: row.created_at || new Date().toISOString()
-});
+export const normalizeVehicle = (row, profileMatch = null) => {
+  const profile = profileMatch || row.profiles || null;
+  return {
+    ...row,
+    id: String(row.id),
+    owner_id: row.owner_id || null,
+    make: row.make || row.brand || '',
+    model: row.model || '',
+    year: row.year || new Date().getFullYear(),
+    category: row.category || 'Economy',
+    zone: row.zone || row.location || 'Bole',
+    dailyRate: Number(row.daily_rate || row.dailyRate || row.price || 0),
+    daily_rate: Number(row.daily_rate || row.dailyRate || row.price || 0),
+    driverMode: row.driver_mode || row.driverMode || 'Self-Drive',
+    driver_mode: row.driver_mode || row.driverMode || 'Self-Drive',
+    transmission: row.transmission || 'Auto',
+    fuel: row.fuel || row.fuel_type || 'Petrol',
+    body: row.body || row.body_type || 'Hatchback',
+    color: row.color || 'Silver',
+    cc: row.cc || row.engine || '1.3L',
+    mileage: row.mileage || '45,000 km',
+    condition: row.condition || 'Used in Ethiopia',
+    seats: row.seats || 5,
+    usage_type: row.usage_type || 'Personal Use',
+    poster_role: row.poster_role || 'Private Owner',
+    owner_phone: profileMatch?.phone_number || profileMatch?.phone || row.owner_phone || row.contact_phone || row.profiles?.phone_number || row.profiles?.phone || '',
+    status: (row.status ? String(row.status).toLowerCase() : 'active'),
+    is_approved: row.is_approved !== undefined ? Boolean(row.is_approved) : true,
+    verified: row.verified !== undefined ? Boolean(row.verified) : true,
+    is_verified: row.is_verified !== undefined ? Boolean(row.is_verified) : true,
+    is_premium: row.is_premium === true,
+    requires_check: Boolean(row.requires_check),
+    deposit_amount: Number(row.deposit_amount || 0),
+    advanced_payment_days: Number(row.advanced_payment_days || 0),
+    advance_payment: row.advance_payment || (row.advanced_payment_days ? `${row.advanced_payment_days} days` : ''),
+    supplier: typeof row.supplier === 'object' && row.supplier !== null 
+      ? { ...row.supplier, phone: '0930175564' } 
+      : { name: profile?.full_name || row.supplier_name || row.supplier || 'Verified Partner', phone: '0930175564' },
+    collateral: row.collateral || ['Kebele ID', 'Deposit'],
+    description: row.description || 'Well-maintained vehicle in excellent condition. Ideal for city driving or long-distance rentals across Ethiopia.',
+    image: row.image || row.image_url || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
+    image_url: row.image_url || row.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
+    images: Array.isArray(row.images) && row.images.length > 0 ? row.images : [row.image_url || row.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'],
+    created_at: row.created_at || new Date().toISOString()
+  };
+};
 
 export const normalizeBooking = (row) => {
   const profileData = row['profiles'] || row.profiles; // Fallback if exact alias isn't returned
@@ -133,7 +136,7 @@ export const AppProvider = ({ children }) => {
       // Force fresh data on every fetch with cache-busting headers and deterministic ordering
       let query = supabase
         .from('vehicles')
-        .select('*, profiles:owner_id(phone, phone_number, full_name)')
+        .select('*')
         .or('status.eq.active,status.is.null')
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
@@ -189,9 +192,35 @@ export const AppProvider = ({ children }) => {
       console.log(`Fetched Active Vehicles (limit ${limit}):`, data);
 
       if (data) {
+        // Extract unique owner IDs and safely lookup profiles without risking query crashes
+        const ownerIds = [...new Set(data.map(v => v.owner_id).filter(Boolean))];
+        let profilesMap = {};
+
+        if (ownerIds.length > 0) {
+          try {
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('id, phone, phone_number, full_name')
+              .in('id', ownerIds);
+
+            if (profilesData && Array.isArray(profilesData)) {
+              profilesData.forEach(p => {
+                if (p && p.id) {
+                  profilesMap[String(p.id)] = p;
+                }
+              });
+            }
+          } catch (profileErr) {
+            console.warn('Profiles lookup notice (continuing without profiles):', profileErr);
+          }
+        }
+
         const activeRows = data
           .filter(row => !row.status || String(row.status).toLowerCase() === 'active')
-          .map(normalizeVehicle);
+          .map(row => {
+            const profileMatch = row.owner_id ? profilesMap[String(row.owner_id)] : null;
+            return normalizeVehicle(row, profileMatch);
+          });
         // Strictly enforce deterministic sorting: created_at DESC, id DESC
         activeRows.sort((a, b) => {
           const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
