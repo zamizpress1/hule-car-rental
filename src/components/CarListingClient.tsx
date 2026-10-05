@@ -48,6 +48,7 @@ export interface Vehicle {
 
 interface CarListingClientProps {
   initialCars: Vehicle[];
+  initialPremiumCars?: Vehicle[];
   initialFilters?: any;
 }
 
@@ -68,9 +69,16 @@ function formatTimeAgo(dateString?: string) {
   return `${diffInMonths}mo ago`;
 }
 
-export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars, initialFilters }) => {
+export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars, initialPremiumCars, initialFilters }) => {
   // Vehicles state seeded directly from Server Component stream (continuous feed)
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialCars || []);
+  // Dedicated isolated state for Premium posts
+  const [premiumVehicles, setPremiumVehicles] = useState<Vehicle[]>(() => {
+    if (initialPremiumCars && initialPremiumCars.length > 0) {
+      return initialPremiumCars.filter(v => v.is_premium === true && (!v.status || String(v.status).toLowerCase() === 'active'));
+    }
+    return (initialCars || []).filter(v => v.is_premium === true && (!v.status || String(v.status).toLowerCase() === 'active'));
+  });
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState(initialFilters?.search || '');
   const [make, setMake] = useState(initialFilters?.make || '');
@@ -100,26 +108,86 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
     }
   }, []);
 
+  // Ensure active premium vehicles are loaded if empty on mount
+  useEffect(() => {
+    async function loadPremium() {
+      try {
+        const { data, error } = await supabase
+          .from('vehicles')
+          .select('id, make, model, year, daily_rate, image_url, status, zone, created_at, is_premium, usage_type, poster_role, advanced_payment_days, advance_payment, urgency_tag, description')
+          .eq('is_premium', true)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.warn('Notice fetching client premium posts:', error.message);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const mapped = data
+            .filter((v: any) => v.is_premium === true && (!v.status || String(v.status).toLowerCase() === 'active'))
+            .map((v: any) => normalizeServerVehicle(v as RawVehicle));
+
+          setPremiumVehicles(mapped);
+        }
+      } catch (err) {
+        console.error('Error fetching premium vehicles on client:', err);
+      }
+    }
+
+    if (premiumVehicles.length === 0) {
+      loadPremium();
+    }
+  }, []);
+
   // Supabase Realtime Subscription (Instant Live Updates)
   useEffect(() => {
     const channel = supabase
       .channel('realtime:vehicles_client')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'vehicles' },
+        { event: '*', schema: 'public', table: 'vehicles' },
         (payload) => {
+          if (payload.eventType === 'DELETE' && payload.old?.id) {
+            setVehicles(prev => prev.filter(v => String(v.id) !== String(payload.old.id)));
+            setPremiumVehicles(prev => prev.filter(v => String(v.id) !== String(payload.old.id)));
+            return;
+          }
+
           if (payload?.new) {
             const newCar = normalizeServerVehicle(payload.new as RawVehicle);
-            setVehicles((prev) => {
-              const filtered = prev.filter(v => String(v.id) !== String(newCar.id));
-              const updated = [newCar, ...filtered];
-              updated.sort((a, b) => {
-                const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-                if (timeDiff !== 0) return timeDiff;
-                return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+            const isPrem = newCar.is_premium === true;
+            const isActive = !newCar.status || String(newCar.status).toLowerCase() === 'active';
+
+            if (isPrem && isActive) {
+              setPremiumVehicles((prev) => {
+                const filtered = prev.filter(v => String(v.id) !== String(newCar.id));
+                const updated = [newCar, ...filtered];
+                updated.sort((a, b) => {
+                  const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                  if (timeDiff !== 0) return timeDiff;
+                  return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+                });
+                return updated;
               });
-              return updated;
-            });
+              setVehicles(prev => prev.filter(v => String(v.id) !== String(newCar.id)));
+            } else if (!isPrem && isActive) {
+              setVehicles((prev) => {
+                const filtered = prev.filter(v => String(v.id) !== String(newCar.id));
+                const updated = [newCar, ...filtered];
+                updated.sort((a, b) => {
+                  const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                  if (timeDiff !== 0) return timeDiff;
+                  return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
+                });
+                return updated;
+              });
+              setPremiumVehicles(prev => prev.filter(v => String(v.id) !== String(newCar.id)));
+            } else {
+              setVehicles(prev => prev.filter(v => String(v.id) !== String(newCar.id)));
+              setPremiumVehicles(prev => prev.filter(v => String(v.id) !== String(newCar.id)));
+            }
           }
         }
       )
@@ -176,8 +244,10 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
     }
   };
 
-  // Filtered cars computed instantly on client & sorted newest first deterministically
+
+  // Filtered fleet cars (non-premium) computed instantly on client & sorted newest first deterministically
   const filteredFleet = vehicles
+    .filter(v => v.is_premium !== true)
     .filter(v => {
       const isStatusActive = !v.status || String(v.status).toLowerCase() === 'active';
       if (!isStatusActive) return false;
@@ -212,6 +282,111 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
 
   return (
     <div className="space-y-6">
+      {/* PREMIUM POSTS SECTION */}
+      <div className="pt-2">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold tracking-tight text-slate-800">
+            Premium posts
+          </h2>
+          <span className="text-[10px] sm:text-xs text-slate-500">
+            Featured vehicles
+          </span>
+        </div>
+
+        {/* The Container */}
+        <div className="flex overflow-x-auto gap-4 snap-x hide-scrollbar pb-2">
+          {premiumVehicles.length > 0 ? (
+            premiumVehicles
+              .filter(vehicle => vehicle.is_premium === true)
+              .map((v, index) => {
+                const isSaved = savedIds.has(v.id);
+                let rawAdv = Number(v.advanced_payment_days || v.advance_days || 0);
+                if (!rawAdv && v.advance_payment) {
+                  const match = String(v.advance_payment).match(/\d+/);
+                  if (match) rawAdv = parseInt(match[0], 10);
+                }
+                const calculatedMonths = rawAdv > 0 ? (rawAdv >= 30 ? Math.round(rawAdv / 30) : rawAdv) : 0;
+
+                return (
+                  <Link
+                    key={v.id}
+                    href={'/vehicle/' + v.id}
+                    className="shrink-0 w-[45%] sm:w-[220px] md:w-[280px] snap-center bg-white rounded-lg border border-slate-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden block"
+                  >
+                    <div className="relative w-full aspect-[16/10] bg-slate-100 overflow-hidden">
+                      <Image
+                        src={v.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'}
+                        alt={`${v.make} ${v.model}`}
+                        fill
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                        priority={index < 4}
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+
+                      {v.urgency_tag && (
+                        <div className="bg-red-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-md absolute top-0 left-0 z-10">
+                          {v.urgency_tag}
+                        </div>
+                      )}
+
+                      {/* Premium Badge */}
+                      <div className="absolute top-2 right-0 bg-slate-900 text-white px-2 py-0.5 rounded-l-md text-[10px] font-bold shadow-xs z-10">
+                        Premium
+                      </div>
+
+                      {/* Price & Advance Overlay */}
+                      <div className="absolute bottom-0 left-0 flex items-center z-10">
+                        <div className="bg-black/80 text-white text-xs md:text-sm font-bold px-2 py-1 rounded-tr-md">
+                          ETB {v.dailyRate} / day
+                        </div>
+                        {calculatedMonths > 0 && (
+                          <div className="bg-amber-600 text-white text-[10px] md:text-xs font-semibold px-2 py-1 rounded-tr-md ml-0.5 shadow-xs">
+                            {calculatedMonths} ወር ቅድመ ክፍያ
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={(e) => handleToggleSave(v.id, e)}
+                        className="absolute top-2 left-2 bg-white/90 backdrop-blur w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-slate-400 shadow-xs hover:text-red-500 transition-colors z-10"
+                        title="Save vehicle"
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
+                      </button>
+
+                      {/* 10% Commission Badge */}
+                      <div className="absolute top-2 left-9 sm:left-10 bg-orange-600 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-xs z-10">
+                        10% Commission
+                      </div>
+                    </div>
+
+                    <div className="p-2 flex flex-col gap-1 flex-1">
+                      <h3 className="text-xs md:text-sm font-bold truncate text-slate-800">
+                        {v.make} {v.model}
+                      </h3>
+
+                      <p className="text-[10px] text-slate-500 truncate">{v.year} • {v.usage_type || 'Personal Use'} • {formatTimeAgo(v.created_at)}</p>
+
+                      <div className="mt-auto flex items-center justify-between pt-1">
+                        <span className="text-[10px] text-green-600 font-bold flex items-center gap-0.5">
+                          <ShieldCheck className="w-3 h-3" /> Verified
+                        </span>
+                        <span className="self-end text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                          {v.poster_role === 'Broker' ? 'Broker Managed' : 'Private Owner'}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
+          ) : (
+            <div className="w-full py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+              No premium posts currently available.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* SEARCH & FILTERS CONTROLS */}
       <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-4 md:p-6 space-y-4">
         {/* Row 1: Search & Zone */}

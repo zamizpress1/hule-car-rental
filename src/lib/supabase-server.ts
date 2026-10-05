@@ -96,7 +96,7 @@ export const normalizeServerVehicle = (row: RawVehicle) => ({
   poster_role: row.poster_role || 'Private Owner',
   owner_phone: row.owner_phone || '',
   status: row.status || 'active',
-  is_premium: Boolean(row.is_premium || (row as any).is_featured || (row as any).featured),
+  is_premium: row.is_premium === true,
   requires_check: Boolean(row.requires_check),
   deposit_amount: Number(row.deposit_amount || 0),
   advanced_payment_days: Number(row.advanced_payment_days || 0),
@@ -174,6 +174,41 @@ export async function getInitialCars(limit: number = 12, customFilters?: any) {
       });
   } catch (err) {
     console.error('Failed to stream initial cars on server:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetch premium cars directly from Supabase.
+ * Includes is_premium in select, filters by is_premium=true and status=active,
+ * sorts newest first, and bypasses any 10-day cutoff so valid inventory is not hidden.
+ */
+export async function getPremiumCars() {
+  try {
+    const supabase = createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from('vehicles')
+      .select('id, make, model, year, daily_rate, image_url, status, zone, created_at, is_premium, usage_type, poster_role, advanced_payment_days, advance_payment, urgency_tag, description')
+      .eq('is_premium', true)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Server Supabase premium fetch error:', error.message);
+      return [];
+    }
+
+    return (data || [])
+      .filter((row: any) => row.is_premium === true && (!row.status || String(row.status).toLowerCase() === 'active'))
+      .map((row: any) => {
+        const normalized = normalizeServerVehicle(row);
+        return {
+          ...normalized,
+          image: row.image_url || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'
+        };
+      });
+  } catch (err) {
+    console.error('Failed to stream premium cars on server:', err);
     return [];
   }
 }

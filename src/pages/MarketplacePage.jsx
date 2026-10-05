@@ -68,75 +68,25 @@ export const MarketplacePage = () => {
   const fetchPremiumVehicles = useCallback(async () => {
     setLoadingPremium(true);
     try {
-      // Calculate 30 days ago ISO string (widened window so valid inventory is never hidden)
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      // Query active premium vehicles directly without strict cutoff
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at, is_premium, usage_type, poster_role, advanced_payment_days, advance_payment, urgency_tag, description')
+        .eq('is_premium', true)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .setHeader('Pragma', 'no-cache');
 
-      let data = null;
-      let error = null;
-
-      // Check which column database uses (is_premium vs is_featured). Query for both or match active schema
-      try {
-        const dualQuery = await supabase
-          .from('vehicles')
-          .select('id, make, model, year, daily_rate, image_url, status, created_at, is_premium, is_featured, images, urgency_tag, advanced_payment_days, advance_payment, usage_type, poster_role')
-          .or('is_premium.eq.true,is_featured.eq.true')
-          .eq('status', 'active')
-          .gte('created_at', thirtyDaysAgo)
-          .order('created_at', { ascending: false })
-          .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-          .setHeader('Pragma', 'no-cache');
-
-        data = dualQuery.data;
-        error = dualQuery.error;
-      } catch (e) {
-        error = e;
-      }
-
-      // If is_featured column does not exist in schema, match active schema (is_premium)
-      if (error || !data) {
-        const schemaQuery = await supabase
-          .from('vehicles')
-          .select('*')
-          .eq('is_premium', true)
-          .eq('status', 'active')
-          .gte('created_at', thirtyDaysAgo)
-          .order('created_at', { ascending: false })
-          .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-          .setHeader('Pragma', 'no-cache');
-
-        data = schemaQuery.data;
-        if (schemaQuery.error) {
-          console.warn('Supabase premium vehicles fetch notice:', schemaQuery.error.message);
-        }
-      }
-
-      // If fewer than 3 premium cars exist, remove strict cutoff so valid inventory is never completely hidden
-      if (!data || data.length < 3) {
-        const fallbackRes = await supabase
-          .from('vehicles')
-          .select('*')
-          .eq('is_premium', true)
-          .eq('status', 'active')
-          .order('created_at', { ascending: false });
-
-        if (fallbackRes.data && fallbackRes.data.length > 0) {
-          data = fallbackRes.data;
-        }
+      if (error) {
+        console.warn('Supabase premium vehicles fetch notice:', error.message);
       }
 
       if (data) {
-        // Ensure status = 'active' and verify is_premium || is_featured
+        // Ensure check strictly uses vehicle.is_premium === true (do NOT look for is_featured or undefined properties)
         const validPremium = data
-          .filter(row => !row.status || String(row.status).toLowerCase() === 'active')
-          .filter(row => row.is_premium === true || row.is_featured === true || row.featured === true)
-          .map(row => {
-            const normalized = normalizeVehicle(row);
-            return {
-              ...normalized,
-              is_premium: Boolean(row.is_premium || row.is_featured || row.featured),
-              is_featured: Boolean(row.is_featured || row.is_premium || row.featured)
-            };
-          });
+          .filter(vehicle => (!vehicle.status || String(vehicle.status).toLowerCase() === 'active') && vehicle.is_premium === true)
+          .map(normalizeVehicle);
 
         validPremium.sort((a, b) => {
           const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
@@ -176,7 +126,7 @@ export const MarketplacePage = () => {
 
           if (payload?.new) {
             const newCar = normalizeVehicle(payload.new);
-            const isPrem = Boolean(newCar.is_premium || newCar.is_featured || newCar.featured);
+            const isPrem = newCar.is_premium === true;
             const isActive = !newCar.status || String(newCar.status).toLowerCase() === 'active';
 
             if (isPrem && isActive) {
@@ -383,7 +333,7 @@ export const MarketplacePage = () => {
             {t.premiumPosts || 'Premium posts'}
           </h2>
           <span className="text-[10px] sm:text-xs text-slate-500">
-            Published in the last 30 days
+            Featured vehicles
           </span>
         </div>
 
@@ -395,9 +345,10 @@ export const MarketplacePage = () => {
                 <CarSkeletonCard />
               </div>
             ))
-          ) : (
-            <>
-              {premiumVehicles.map(v => {
+          ) : premiumVehicles.length > 0 ? (
+            premiumVehicles
+              .filter(vehicle => vehicle.is_premium === true)
+              .map(v => {
                 const isSaved = savedIds.has(v.id);
                 let rawAdv = Number(v.advanced_payment_days || v.advance_days || 0);
                 if (!rawAdv && v.advance_payment) {
@@ -476,14 +427,11 @@ export const MarketplacePage = () => {
                 </div>
               </div>
             );
-          })}
-
-              {premiumVehicles.length === 0 && (
-                <div className="w-full py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
-                  No premium posts currently available.
-                </div>
-              )}
-            </>
+          })
+          ) : (
+            <div className="w-full py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+              No premium posts currently available.
+            </div>
           )}
         </div>
       </div>

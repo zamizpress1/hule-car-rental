@@ -1,5 +1,5 @@
 import React from 'react';
-import { getInitialCars } from '../lib/supabase-server';
+import { getInitialCars, getPremiumCars } from '../lib/supabase-server';
 import CarListingClient from './CarListingClient';
 import { parseUrlFilters } from '../utils/urlFilters';
 
@@ -14,9 +14,18 @@ interface CarListStreamerProps {
  */
 export async function CarListStreamer({ rawParams }: CarListStreamerProps = {}) {
   const validFilters = rawParams ? parseUrlFilters(rawParams) : undefined;
-  const initialCars = await getInitialCars(12, validFilters?.hasActiveFilters ? validFilters : undefined);
+  const [initialCars, initialPremiumCars] = await Promise.all([
+    getInitialCars(12, validFilters?.hasActiveFilters ? validFilters : undefined),
+    getPremiumCars()
+  ]);
 
-  return <CarListingClient initialCars={initialCars} initialFilters={validFilters?.hasActiveFilters ? validFilters : undefined} />;
+  return (
+    <CarListingClient
+      initialCars={initialCars}
+      initialPremiumCars={initialPremiumCars}
+      initialFilters={validFilters?.hasActiveFilters ? validFilters : undefined}
+    />
+  );
 }
 
 export default CarListStreamer;

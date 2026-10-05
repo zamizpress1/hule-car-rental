@@ -33,7 +33,7 @@ export const normalizeVehicle = (row) => ({
   is_approved: row.is_approved !== undefined ? Boolean(row.is_approved) : true,
   verified: row.verified !== undefined ? Boolean(row.verified) : true,
   is_verified: row.is_verified !== undefined ? Boolean(row.is_verified) : true,
-  is_premium: Boolean(row.is_premium || row.is_featured || row.featured),
+  is_premium: row.is_premium === true,
   requires_check: Boolean(row.requires_check),
   deposit_amount: Number(row.deposit_amount || 0),
   advanced_payment_days: Number(row.advanced_payment_days || 0),
