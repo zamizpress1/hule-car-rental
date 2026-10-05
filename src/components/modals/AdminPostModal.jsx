@@ -14,6 +14,7 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
     year: 2022,
     condition: 'Used in Ethiopia',
     rate: '',
+    phone: '',
     category: 'Economy',
     zone: 'Bole',
     driverMode: 'Self-Drive',
@@ -166,6 +167,8 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
       ],
       deposit_amount: parseFloat(formData.depositAmount) || 0,
       advanced_payment_days: parseInt(formData.advancedPaymentDays, 10) || 0,
+      poster_role: 'Private Owner',
+      owner_phone: formData.phone?.trim() || user?.phone || '0930175564',
       status: 'active',
       is_premium: true,
       urgency_tag: formData.urgencyTag === 'None' ? null : formData.urgencyTag
@@ -214,6 +217,7 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
           year: 2023,
           condition: 'Used in Ethiopia',
           rate: '',
+          phone: '',
           category: 'Economy',
           zone: 'Bole',
           driverMode: 'Self-Drive',
@@ -310,6 +314,17 @@ export const AdminPostModal = ({ isOpen, onClose, onSuccess }) => {
                 placeholder="e.g. 3500" 
                 required
                 className="w-full bg-background rounded-xl p-3 text-sm font-extrabold text-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-content ml-2 block mb-1">Owner Contact Phone *</label>
+              <input 
+                type="tel" 
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                placeholder="e.g. 0911000000" 
+                required
+                className="w-full bg-background rounded-xl p-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand/20 transition-all"
               />
             </div>
             <div>

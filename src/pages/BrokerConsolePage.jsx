@@ -25,7 +25,7 @@ import {
   Trash2,
   MessageCircle
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, normalizeVehicle } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useSettings } from '../context/SettingsContext';
 import { supabase } from '../lib/supabase';
@@ -142,6 +142,29 @@ export const BrokerConsolePage = () => {
     { id: 'completed', label: 'Completed', color: 'bg-emerald-500' }
   ];
 
+  const getVehicleContactPhone = (v) => {
+    return v?.owner_phone || 
+           v?.contact_phone || 
+           v?.phone || 
+           v?.profiles?.phone_number || 
+           v?.profiles?.phone || 
+           v?.supplier?.phone || 
+           '';
+  };
+
+  // Automatically fetch active vehicles on mount and when active_fleet tab is active
+  useEffect(() => {
+    if (typeof refetchVehicles === 'function') {
+      refetchVehicles(100);
+    }
+  }, [refetchVehicles]);
+
+  useEffect(() => {
+    if (activeTab === 'active_fleet' && typeof refetchVehicles === 'function') {
+      refetchVehicles(100);
+    }
+  }, [activeTab, refetchVehicles]);
+
   useEffect(() => {
     // Safe state access inside the realtime subscription
     const channel = supabase
@@ -153,12 +176,14 @@ export const BrokerConsolePage = () => {
               const currentPrev = Array.isArray(prev) ? prev : [];
               const exists = currentPrev.find(v => String(v.id) === String(payload.new.id));
               if (exists) return currentPrev;
-              return [payload.new, ...currentPrev];
+              const normalized = normalizeVehicle(payload.new);
+              return [normalized, ...currentPrev];
             });
           } else if (payload.eventType === 'UPDATE') {
             setVehicles(prev => {
               const currentPrev = Array.isArray(prev) ? prev : [];
-              return currentPrev.map(v => String(v.id) === String(payload.new.id) ? { ...v, ...payload.new } : v);
+              const normalized = normalizeVehicle(payload.new);
+              return currentPrev.map(v => String(v.id) === String(payload.new.id) ? { ...v, ...normalized } : v);
             });
           } else if (payload.eventType === 'DELETE') {
             setVehicles(prev => {
@@ -627,6 +652,7 @@ export const BrokerConsolePage = () => {
                   <tbody className="divide-y divide-border">
                     {vehicles?.map((v, index) => {
                       const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
+                      const contactPhone = getVehicleContactPhone(v);
                       return (
                         <tr key={v?.id} className={`group hover:bg-slate-50 transition-colors ${rowBg}`}>
                           <td className="py-3 px-4">
@@ -663,9 +689,10 @@ export const BrokerConsolePage = () => {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            {(v?.owner_phone || v?.profiles?.phone_number || v?.profiles?.phone) ? (
-                              <a href={`tel:${v.owner_phone || v.profiles?.phone_number || v.profiles?.phone}`} className="text-blue-600 font-bold hover:underline">
-                                {v.owner_phone || v.profiles?.phone_number || v.profiles?.phone}
+                            {contactPhone ? (
+                              <a href={`tel:${contactPhone}`} className="text-blue-600 font-bold hover:underline inline-flex items-center gap-1.5">
+                                <Phone className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                {contactPhone}
                               </a>
                             ) : (
                               <span className="text-slate-400 italic">No Number</span>
@@ -715,31 +742,31 @@ export const BrokerConsolePage = () => {
                               >
                                 ★ {v.is_premium ? 'Premium' : 'Promote'}
                               </button>
-                              {(v?.owner_phone || v?.profiles?.phone_number || v?.profiles?.phone) ? (
+                              {contactPhone ? (
                                 <>
                                   <a
-                                    href={`tel:${v.owner_phone || v.profiles?.phone_number || v.profiles?.phone}`}
-                                    className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors"
-                                    title="Call Owner"
+                                    href={`tel:${contactPhone}`}
+                                    className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors shadow-xs"
+                                    title={`Call Owner (${contactPhone})`}
                                   >
                                     <Phone className="w-4 h-4" />
                                   </a>
                                   <a
-                                    href={`https://wa.me/${(v.owner_phone || v.profiles?.phone_number || v.profiles?.phone)?.replace(/[^0-9]/g, '')}`}
+                                    href={`https://wa.me/${contactPhone.replace(/[^0-9]/g, '')}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="w-8 h-8 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors"
-                                    title="WhatsApp"
+                                    className="w-8 h-8 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 flex items-center justify-center transition-colors shadow-xs"
+                                    title={`WhatsApp Owner (${contactPhone})`}
                                   >
                                     <MessageCircle className="w-4 h-4" />
                                   </a>
                                 </>
                               ) : (
                                 <>
-                                  <button disabled className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center cursor-not-allowed">
+                                  <button disabled className="w-8 h-8 rounded-full bg-slate-100 text-slate-300 flex items-center justify-center cursor-not-allowed" title="No Phone Available">
                                     <Phone className="w-4 h-4" />
                                   </button>
-                                  <button disabled className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center cursor-not-allowed">
+                                  <button disabled className="w-8 h-8 rounded-full bg-slate-100 text-slate-300 flex items-center justify-center cursor-not-allowed" title="No Phone Available">
                                     <MessageCircle className="w-4 h-4" />
                                   </button>
                                 </>

@@ -4,9 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "dev": "vite",
+    "build": "vite build",
+    "build:next": "next build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@sentry/react": "^10.74.0",

@@ -30,7 +30,7 @@ export const normalizeVehicle = (row, profileMatch = null) => {
     seats: row.seats || 5,
     usage_type: row.usage_type || 'Personal Use',
     poster_role: row.poster_role || 'Private Owner',
-    owner_phone: profileMatch?.phone_number || profileMatch?.phone || row.owner_phone || row.contact_phone || row.profiles?.phone_number || row.profiles?.phone || '',
+    owner_phone: row.owner_phone || profileMatch?.phone_number || profileMatch?.phone || row.contact_phone || row.profiles?.phone_number || row.profiles?.phone || '',
     status: (row.status ? String(row.status).toLowerCase() : 'active'),
     is_approved: row.is_approved !== undefined ? Boolean(row.is_approved) : true,
     verified: row.verified !== undefined ? Boolean(row.verified) : true,
@@ -120,7 +120,7 @@ export const AppProvider = ({ children }) => {
   // Strictly enforces deterministic sorting by newest first: .order('created_at', { ascending: false }).order('id', { ascending: false }).
   // Eliminates race conditions via AbortController so that only the latest query updates state.
   // ONLY applies valid whitelist filter parameters; explicitly ignores all marketing tracking parameters (fbclid, igshid, gclid, utm_*).
-  const fetchActiveVehiclesFromSupabase = useCallback(async (limit = 16, customFilters = null) => {
+  const fetchActiveVehiclesFromSupabase = useCallback(async (limit = 50, customFilters = null) => {
     // Abort any previous in-flight request to eliminate race conditions
     if (vehiclesAbortControllerRef.current) {
       vehiclesAbortControllerRef.current.abort();
