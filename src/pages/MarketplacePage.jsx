@@ -71,7 +71,7 @@ export const MarketplacePage = () => {
       // Query active premium vehicles directly without strict cutoff
       const { data, error } = await supabase
         .from('vehicles')
-        .select('id, make, model, year, daily_rate, image_url, images, status, zone, created_at, is_premium, usage_type, poster_role, advanced_payment_days, advance_payment, urgency_tag, description')
+        .select('id, make, model, year, daily_rate, image_url, status, zone, created_at, is_premium, usage_type, poster_role, advanced_payment_days, advance_payment, urgency_tag, description')
         .eq('is_premium', true)
         .eq('status', 'active')
         .order('created_at', { ascending: false })
