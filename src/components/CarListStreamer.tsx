@@ -1,7 +1,3 @@
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'force-no-store';
-
 import React from 'react';
 import { getInitialCars } from '../lib/supabase-server';
 import CarListingClient from './CarListingClient';
@@ -18,7 +14,7 @@ interface CarListStreamerProps {
  */
 export async function CarListStreamer({ rawParams }: CarListStreamerProps = {}) {
   const validFilters = rawParams ? parseUrlFilters(rawParams) : undefined;
-  const initialCars = await getInitialCars(16, validFilters?.hasActiveFilters ? validFilters : undefined);
+  const initialCars = await getInitialCars(12, validFilters?.hasActiveFilters ? validFilters : undefined);
 
   return <CarListingClient initialCars={initialCars} initialFilters={validFilters?.hasActiveFilters ? validFilters : undefined} />;
 }

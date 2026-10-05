@@ -440,7 +440,6 @@ export const AppProvider = ({ children }) => {
   }, [user?.id]);
 
   useEffect(() => {
-    // fetchActiveVehiclesFromSupabase(16); // Removed to prevent double-fetching on client
     fetchPendingVehiclesFromSupabase();
     fetchBookingsFromSupabase();
     fetchUsersFromSupabase();

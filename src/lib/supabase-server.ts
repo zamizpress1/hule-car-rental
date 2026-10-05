@@ -1,6 +1,3 @@
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'force-no-store';
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -124,7 +121,7 @@ export async function getInitialCars(limit: number = 12, customFilters?: any) {
     const supabase = createServerSupabaseClient();
     let query = supabase
       .from('vehicles')
-      .select('*')
+      .select('id, make, model, year, daily_rate, image_url, status, zone, created_at, is_premium, usage_type, poster_role')
       .or('status.eq.active,status.is.null')
       .order('created_at', { ascending: false })
       .order('id', { ascending: false });
@@ -156,9 +153,8 @@ export async function getInitialCars(limit: number = 12, customFilters?: any) {
       }
     }
 
-    if (limit) {
-      query = query.limit(limit);
-    }
+    // Enforce limit(12)
+    query = query.limit(12);
 
     const { data, error } = await query;
 
@@ -169,7 +165,13 @@ export async function getInitialCars(limit: number = 12, customFilters?: any) {
 
     return (data || [])
       .filter((row: any) => !row.status || String(row.status).toLowerCase() === 'active')
-      .map(normalizeServerVehicle);
+      .map((row: any) => {
+        const normalized = normalizeServerVehicle(row);
+        return {
+          ...normalized,
+          image: row.image_url || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'
+        };
+      });
   } catch (err) {
     console.error('Failed to stream initial cars on server:', err);
     return [];

@@ -352,12 +352,12 @@ export const CarListingClient: React.FC<CarListingClientProps> = ({ initialCars,
               return (
                 <Link
                   key={v.id}
-                  href={`/vehicle/${v.id}`}
+                  href={'/vehicle/' + v.id}
                   className="bg-white rounded-lg border border-slate-200 flex flex-col group cursor-pointer hover:shadow-md transition-all overflow-hidden block"
                 >
                   <div className="relative w-full aspect-[16/10] bg-slate-100 overflow-hidden">
                     <Image
-                      src={v.image || (v.images && v.images[0]) || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'}
+                      src={v.image || 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop'}
                       alt={`${v.make} ${v.model}`}
                       fill
                       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
