@@ -20,8 +20,13 @@ export const createServerSupabaseClient = () => {
         'Pragma': 'no-cache'
       },
       fetch: (url, options = {}) => {
+        const headers = new Headers(options.headers || {});
+        headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        headers.set('Pragma', 'no-cache');
+        headers.set('X-Cache-Buster', String(Date.now()));
         return fetch(url, {
           ...options,
+          headers,
           cache: 'no-store'
         });
       }
@@ -124,7 +129,8 @@ export async function getInitialCars(limit: number = 16, customFilters?: any) {
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })
       .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-      .setHeader('Pragma', 'no-cache');
+      .setHeader('Pragma', 'no-cache')
+      .setHeader('X-Cache-Buster', String(Date.now()));
 
     if (customFilters) {
       const safeFilters = parseUrlFilters(customFilters);

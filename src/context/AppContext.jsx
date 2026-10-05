@@ -83,21 +83,12 @@ export const AppProvider = ({ children }) => {
   const { user } = useAuth();
   const vehiclesAbortControllerRef = useRef(null);
   const [savedIds, setSavedIds] = useState(new Set());
+  // Clean up any legacy localStorage cache on startup and start with fresh empty array
   const [vehicles, setVehicles] = useState(() => {
     try {
-      const cached = localStorage.getItem('cached_active_vehicles');
-      if (!cached) return [];
-      const parsed = JSON.parse(cached);
-      if (!Array.isArray(parsed)) return [];
-      // Deterministically sort cached vehicles by newest created_at, then id DESC
-      return parsed.sort((a, b) => {
-        const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-        if (timeDiff !== 0) return timeDiff;
-        return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
-      });
-    } catch {
-      return [];
-    }
+      localStorage.removeItem('cached_active_vehicles');
+    } catch {}
+    return [];
   });
   const [loadingVehicles, setLoadingVehicles] = useState(true);
   const [pendingVehicles, setPendingVehicles] = useState([]);
@@ -135,6 +126,8 @@ export const AppProvider = ({ children }) => {
     vehiclesAbortControllerRef.current = controller;
 
     setLoadingVehicles(true);
+    // Enforce strict loading state: clear React state before fetch completes so old fleet is never rendered
+    setVehicles([]);
 
     try {
       // Force fresh data on every fetch with cache-busting headers and deterministic ordering
@@ -146,6 +139,7 @@ export const AppProvider = ({ children }) => {
         .order('id', { ascending: false })
         .setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
         .setHeader('Pragma', 'no-cache')
+        .setHeader('X-Cache-Buster', String(Date.now()))
         .abortSignal(controller.signal);
 
       if (customFilters) {
@@ -221,9 +215,6 @@ export const AppProvider = ({ children }) => {
             return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
           });
 
-          try {
-            localStorage.setItem('cached_active_vehicles', JSON.stringify(merged));
-          } catch {}
           return merged;
         });
         return { data: activeRows };
@@ -499,9 +490,6 @@ export const AppProvider = ({ children }) => {
         if (timeDiff !== 0) return timeDiff;
         return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
       });
-      try {
-        localStorage.setItem('cached_active_vehicles', JSON.stringify(updated));
-      } catch {}
       return updated;
     });
     fetchActiveVehiclesFromSupabase(16);

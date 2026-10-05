@@ -57,7 +57,8 @@ export const MarketplacePage = () => {
   const { language, toggleLanguage, t } = useLanguage();
   const { settings } = useSettings();
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const loading = (loadingVehicles ?? false) && vehicles.length === 0;
+  // Enforce strict loading state: While initial network request is pending, render Skeleton loader
+  const loading = Boolean(loadingVehicles);
 
   // Supabase Realtime Subscription (Instant Live Updates)
   useEffect(() => {
@@ -80,9 +81,6 @@ export const MarketplacePage = () => {
                 if (timeDiff !== 0) return timeDiff;
                 return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
               });
-              try {
-                localStorage.setItem('cached_active_vehicles', JSON.stringify(updated));
-              } catch {}
               return updated;
             });
           }

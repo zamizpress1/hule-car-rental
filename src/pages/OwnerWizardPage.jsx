@@ -356,18 +356,6 @@ export const OwnerWizardPage = () => {
           return updated;
         });
       }
-      try {
-        const cached = localStorage.getItem('cached_active_vehicles');
-        const list = cached ? JSON.parse(cached) : [];
-        const updated = [normalizedNewCar, ...list.filter(v => String(v.id) !== String(normalizedNewCar.id))];
-        updated.sort((a, b) => {
-          const timeDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-          if (timeDiff !== 0) return timeDiff;
-          return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
-        });
-        localStorage.setItem('cached_active_vehicles', JSON.stringify(updated));
-      } catch {}
-
       addGarageVehicle(insertedVehicle);
       if (typeof setFilters === 'function') {
         setFilters({ search: '', zone: 'all', category: 'all', driverMode: 'all', make: '', model: '', year: '' });

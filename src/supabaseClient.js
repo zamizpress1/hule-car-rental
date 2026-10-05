@@ -11,8 +11,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'Pragma': 'no-cache'
     },
     fetch: (url, options = {}) => {
+      const headers = new Headers(options.headers || {});
+      headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      headers.set('Pragma', 'no-cache');
+      headers.set('X-Cache-Buster', String(Date.now()));
       return fetch(url, {
         ...options,
+        headers,
         cache: 'no-store'
       });
     }
